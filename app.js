@@ -3,7 +3,7 @@ let data = structuredClone(emptyData);
 let supabaseClient = null;
 const TABLES = Object.keys(emptyData);
 
-function configured(){ return window.SUPABASE_URL && window.SUPABASE_ANON_KEY && !window.SUPABASE_URL.includes('TON-PROJET') && !window.SUPABASE_ANON_KEY.includes('TON_ANON_KEY'); }
+function configured(){ return window.SUPABASE_URL && window.SUPABASE_ANON_KEY && !window.SUPABASE_URL.includes("https://lvjlpqzgaoktbihbbqme.supabase.co") && !window.SUPABASE_ANON_KEY.includes('sb_publishable_SdnS4zzVO4l5E3R93WiDxg_5hJwvfVr'); }
 function initDb(){
   if(configured() && window.supabase){ supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY); }
 }
