@@ -1,6 +1,6 @@
 // =====================================================
 // ADMIN.JS — CLAN SAINT MARC
-// Authentification Supabase + espace administrateur
+// Connexion administrateur avec Supabase
 // =====================================================
 
 const supabaseClient = window.supabase.createClient(
@@ -8,99 +8,81 @@ const supabaseClient = window.supabase.createClient(
   window.SUPABASE_ANON_KEY
 );
 
+
 // -----------------------------------------------------
-// Éléments de la page
+// Éléments du formulaire
 // -----------------------------------------------------
 
-const loginSection = document.getElementById("loginSection");
-const adminSection = document.getElementById("adminSection");
+const emailInput = document.getElementById("admin-email");
+const passwordInput = document.getElementById("admin-password");
 
-const loginForm = document.getElementById("loginForm");
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
-
-const loginMessage = document.getElementById("loginMessage");
-const adminMessage = document.getElementById("adminMessage");
-
-const logoutButton = document.getElementById("logoutButton");
+// On récupère le formulaire directement depuis le champ e-mail
+const loginForm = emailInput ? emailInput.closest("form") : null;
 
 
 // -----------------------------------------------------
-// État de l'utilisateur
+// Message de connexion
 // -----------------------------------------------------
 
-let currentUser = null;
-let currentUserIsAdmin = false;
+function showMessage(message, type = "error") {
 
+  let messageElement = document.getElementById("admin-login-message");
 
-// -----------------------------------------------------
-// Afficher un message
-// -----------------------------------------------------
+  // S'il n'existe pas dans le HTML, on le crée automatiquement
+  if (!messageElement && loginForm) {
 
-function showLoginMessage(message, type = "error") {
-  if (!loginMessage) return;
+    messageElement = document.createElement("p");
 
-  loginMessage.textContent = message;
-  loginMessage.className = `message ${type}`;
-}
+    messageElement.id = "admin-login-message";
 
-function showAdminMessage(message, type = "success") {
-  if (!adminMessage) return;
+    messageElement.style.marginTop = "12px";
 
-  adminMessage.textContent = message;
-  adminMessage.className = `message ${type}`;
-}
-
-
-// -----------------------------------------------------
-// Afficher / cacher les interfaces
-// -----------------------------------------------------
-
-function showLogin() {
-  if (loginSection) {
-    loginSection.style.display = "block";
+    loginForm.appendChild(messageElement);
   }
 
-  if (adminSection) {
-    adminSection.style.display = "none";
-  }
-}
+  if (!messageElement) return;
 
-function showAdmin() {
-  if (loginSection) {
-    loginSection.style.display = "none";
-  }
+  messageElement.textContent = message;
 
-  if (adminSection) {
-    adminSection.style.display = "block";
+  if (type === "error") {
+    messageElement.style.color = "#d32f2f";
+  } else if (type === "success") {
+    messageElement.style.color = "#2e7d32";
+  } else {
+    messageElement.style.color = "#555";
   }
 }
 
 
 // -----------------------------------------------------
-// Vérifier si l'utilisateur connecté est administrateur
+// Vérifier si l'utilisateur est administrateur
 // -----------------------------------------------------
 
 async function checkAdmin() {
 
-  if (!currentUser) {
-    currentUserIsAdmin = false;
+  const {
+    data: {
+      user
+    }
+  } = await supabaseClient.auth.getUser();
+
+  if (!user) {
     return false;
   }
 
-  const { data, error } = await supabaseClient.rpc("is_admin");
+  const {
+    data,
+    error
+  } = await supabaseClient.rpc("is_admin");
 
   if (error) {
-    console.error("Erreur lors de la vérification admin :", error);
 
-    currentUserIsAdmin = false;
+    console.error("Erreur is_admin :", error);
 
     return false;
   }
 
-  currentUserIsAdmin = data === true;
-
-  return currentUserIsAdmin;
+  return data === true;
 }
 
 
@@ -110,15 +92,14 @@ async function checkAdmin() {
 
 async function loginAdmin(event) {
 
-  if (event) {
-    event.preventDefault();
-  }
+  event.preventDefault();
 
-  const email = emailInput?.value.trim();
-  const password = passwordInput?.value;
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
 
   if (!email || !password) {
-    showLoginMessage(
+
+    showMessage(
       "Veuillez entrer votre adresse e-mail et votre mot de passe.",
       "error"
     );
@@ -126,57 +107,71 @@ async function loginAdmin(event) {
     return;
   }
 
-  showLoginMessage("Connexion en cours...", "info");
+  showMessage("Connexion en cours...", "info");
 
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
+  const {
+    data,
+    error
+  } = await supabaseClient.auth.signInWithPassword({
     email: email,
     password: password
   });
 
   if (error) {
 
-    console.error("Erreur de connexion :", error);
+    console.error("Erreur Supabase :", error);
 
-    showLoginMessage(
-      "E-mail ou mot de passe incorrect.",
+    showMessage(
+      "Connexion impossible : " + error.message,
       "error"
     );
 
     return;
   }
 
-  currentUser = data.user;
 
-  // IMPORTANT :
-  // On récupère réellement le résultat de la vérification.
+  // Vérification du statut administrateur
   const admin = await checkAdmin();
 
   if (!admin) {
 
     await supabaseClient.auth.signOut();
 
-    currentUser = null;
-    currentUserIsAdmin = false;
-
-    showLoginMessage(
-      "Connexion réussie, mais ce compte n'est pas autorisé à accéder à l'administration.",
+    showMessage(
+      "Ce compte est connecté, mais il n'est pas administrateur.",
       "error"
     );
 
     return;
   }
 
-  showLoginMessage("", "success");
 
-  showAdmin();
-
-  showAdminMessage(
-    `Bienvenue ${currentUser.email}`,
+  // Connexion réussie
+  showMessage(
+    "Connexion réussie !",
     "success"
   );
 
-  // Charger les données administratives
-  await loadAdminData();
+  // Chercher le tableau de bord
+  const dashboard =
+    document.getElementById("admin-dashboard") ||
+    document.getElementById("dashboard");
+
+  if (dashboard) {
+    dashboard.style.display = "block";
+  }
+
+
+  // Cacher la zone de connexion si elle possède un conteneur
+  const loginSection =
+    document.getElementById("admin-login") ||
+    document.getElementById("login-section") ||
+    document.getElementById("loginSection");
+
+  if (loginSection) {
+    loginSection.style.display = "none";
+  }
+
 }
 
 
@@ -186,115 +181,18 @@ async function loginAdmin(event) {
 
 async function logoutAdmin() {
 
-  const { error } = await supabaseClient.auth.signOut();
+  const {
+    error
+  } = await supabaseClient.auth.signOut();
 
   if (error) {
-    console.error("Erreur lors de la déconnexion :", error);
-    return;
-  }
 
-  currentUser = null;
-  currentUserIsAdmin = false;
-
-  showLogin();
-
-  if (passwordInput) {
-    passwordInput.value = "";
-  }
-
-  showLoginMessage(
-    "Vous êtes déconnecté.",
-    "success"
-  );
-}
-
-
-// -----------------------------------------------------
-// Vérification de sécurité avant toute action
-// -----------------------------------------------------
-
-function isAdmin() {
-  return currentUserIsAdmin === true;
-}
-
-
-// -----------------------------------------------------
-// Restaurer une session existante
-// -----------------------------------------------------
-
-async function restoreSession() {
-
-  const {
-    data: {
-      session
-    }
-  } = await supabaseClient.auth.getSession();
-
-  if (!session || !session.user) {
-    currentUser = null;
-    currentUserIsAdmin = false;
-
-    showLogin();
+    console.error("Erreur déconnexion :", error);
 
     return;
   }
 
-  currentUser = session.user;
-
-  const admin = await checkAdmin();
-
-  if (!admin) {
-
-    await supabaseClient.auth.signOut();
-
-    currentUser = null;
-    currentUserIsAdmin = false;
-
-    showLogin();
-
-    showLoginMessage(
-      "Ce compte n'a pas accès à l'administration.",
-      "error"
-    );
-
-    return;
-  }
-
-  showAdmin();
-
-  showAdminMessage(
-    `Bienvenue ${currentUser.email}`,
-    "success"
-  );
-
-  await loadAdminData();
-}
-
-
-// -----------------------------------------------------
-// Chargement des données administratives
-// -----------------------------------------------------
-
-async function loadAdminData() {
-
-  if (!isAdmin()) {
-    console.warn("Accès refusé : utilisateur non administrateur.");
-    return;
-  }
-
-  console.log("Chargement de l'espace administrateur...");
-
-  /*
-    Les fonctions de chargement des différentes sections
-    peuvent être ajoutées ici :
-
-    await loadNews();
-    await loadBirthdays();
-    await loadGallery();
-    await loadVideos();
-    await loadPromotions();
-  */
-
+  window.location.reload();
 }
 
 
@@ -304,77 +202,65 @@ async function loadAdminData() {
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-  // Bouton / formulaire de connexion
-  if (loginForm) {
-    loginForm.addEventListener("submit", loginAdmin);
-  }
+  // Vérifier que les champs existent
+  if (!emailInput || !passwordInput) {
 
-  // Bouton de déconnexion
-  if (logoutButton) {
-    logoutButton.addEventListener("click", logoutAdmin);
-  }
-
-  // Au départ, on affiche la connexion
-  showLogin();
-
-  // Puis on vérifie si une session existe déjà
-  await restoreSession();
-
-});
-
-
-// -----------------------------------------------------
-// Écouter les changements d'authentification Supabase
-// -----------------------------------------------------
-
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-
-  console.log("Auth event :", event);
-
-  if (event === "SIGNED_OUT") {
-
-    currentUser = null;
-    currentUserIsAdmin = false;
-
-    showLogin();
+    console.error(
+      "ERREUR : admin-email ou admin-password introuvable."
+    );
 
     return;
   }
 
-  if (
-    event === "SIGNED_IN" ||
-    event === "INITIAL_SESSION"
-  ) {
 
-    if (!session || !session.user) {
-      showLogin();
-      return;
+  // Vérifier que le formulaire existe
+  if (!loginForm) {
+
+    console.error(
+      "ERREUR : aucun formulaire trouvé autour de admin-email."
+    );
+
+    return;
+  }
+
+
+  // Brancher la connexion sur le formulaire
+  loginForm.addEventListener("submit", loginAdmin);
+
+
+  // Vérifier s'il existe déjà une session
+  const {
+    data: {
+      session
     }
+  } = await supabaseClient.auth.getSession();
 
-    currentUser = session.user;
+
+  if (session) {
 
     const admin = await checkAdmin();
 
-    if (!admin) {
+    if (admin) {
 
-      currentUser = null;
-      currentUserIsAdmin = false;
+      const dashboard =
+        document.getElementById("admin-dashboard") ||
+        document.getElementById("dashboard");
 
-      await supabaseClient.auth.signOut();
+      const loginSection =
+        document.getElementById("admin-login") ||
+        document.getElementById("login-section") ||
+        document.getElementById("loginSection");
 
-      showLogin();
+      if (dashboard) {
+        dashboard.style.display = "block";
+      }
 
-      showLoginMessage(
-        "Ce compte n'est pas autorisé à accéder à l'administration.",
-        "error"
-      );
+      if (loginSection) {
+        loginSection.style.display = "none";
+      }
 
-      return;
     }
 
-    showAdmin();
-
-    await loadAdminData();
   }
 
 });
