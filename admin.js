@@ -1,12 +1,12 @@
-// =====================================================
-// ADMIN.JS — CLAN SAINT MARC
-// Administration + Supabase
-// =====================================================
+/* =========================================================
+   CLAN SAINT MARC
+   ADMIN.JS
+   ========================================================= */
 
 
-// =====================================================
-// 1. CONNEXION SUPABASE
-// =====================================================
+/* =========================================================
+   1. CONNEXION SUPABASE
+   ========================================================= */
 
 const supabaseClient = window.supabase.createClient(
   window.SUPABASE_URL,
@@ -14,23 +14,32 @@ const supabaseClient = window.supabase.createClient(
 );
 
 
-// =====================================================
-// 2. ÉLÉMENTS HTML
-// =====================================================
+/* =========================================================
+   2. ÉLÉMENTS DE LA PAGE
+   ========================================================= */
 
-const loginBox = document.getElementById("login-box");
-const dashboard = document.getElementById("dashboard");
+const loginBox =
+  document.getElementById("login-box");
 
-const emailInput = document.getElementById("admin-email");
-const passwordInput = document.getElementById("admin-password");
+const dashboard =
+  document.getElementById("dashboard");
 
-const loginMsg = document.getElementById("login-msg");
-const adminUser = document.getElementById("admin-user");
+const adminEmail =
+  document.getElementById("admin-email");
+
+const adminPassword =
+  document.getElementById("admin-password");
+
+const loginMsg =
+  document.getElementById("login-msg");
+
+const adminUser =
+  document.getElementById("admin-user");
 
 
-// =====================================================
-// 3. MESSAGE
-// =====================================================
+/* =========================================================
+   3. MESSAGES
+   ========================================================= */
 
 function showMessage(message, type = "error") {
 
@@ -38,43 +47,37 @@ function showMessage(message, type = "error") {
 
   loginMsg.textContent = message;
 
-  if (type === "success") {
-    loginMsg.style.color = "#2e7d32";
-  }
-
-  else if (type === "info") {
-    loginMsg.style.color = "#555";
-  }
-
-  else {
-    loginMsg.style.color = "#d32f2f";
-  }
+  loginMsg.style.color =
+    type === "success"
+      ? "green"
+      : "red";
 }
 
 
-// =====================================================
-// 4. VÉRIFIER SI L'UTILISATEUR EST ADMIN
-// =====================================================
+/* =========================================================
+   4. VÉRIFICATION ADMIN
+   ========================================================= */
 
-async function checkAdmin() {
+async function checkAdmin(userId) {
 
-  const {
-    data: { user },
-    error: userError
-  } = await supabaseClient.auth.getUser();
-
-  if (userError || !user) {
+  if (!userId) {
     return false;
   }
 
   const {
     data,
     error
-  } = await supabaseClient.rpc("is_admin");
+  } = await supabaseClient
+    .rpc("is_admin", {
+      user_id: userId
+    });
 
   if (error) {
 
-    console.error("Erreur RPC is_admin :", error);
+    console.error(
+      "Erreur vérification admin :",
+      error
+    );
 
     return false;
   }
@@ -83,212 +86,219 @@ async function checkAdmin() {
 }
 
 
-// =====================================================
-// 5. AFFICHER LE TABLEAU DE BORD
-// =====================================================
+/* =========================================================
+   5. AFFICHER LE DASHBOARD
+   ========================================================= */
 
 function showDashboard(user) {
 
   if (loginBox) {
-    loginBox.hidden = true;
+    loginBox.style.display = "none";
   }
 
   if (dashboard) {
-    dashboard.hidden = false;
+    dashboard.style.display = "block";
   }
 
   if (adminUser && user) {
 
     adminUser.textContent =
-      user.email || "Administrateur connecté";
+      user.email || "";
   }
 }
 
 
-// =====================================================
-// 6. AFFICHER LA CONNEXION
-// =====================================================
+/* =========================================================
+   6. AFFICHER LA CONNEXION
+   ========================================================= */
 
 function showLogin() {
 
   if (loginBox) {
-    loginBox.hidden = false;
+    loginBox.style.display = "block";
   }
 
   if (dashboard) {
-    dashboard.hidden = true;
+    dashboard.style.display = "none";
   }
 }
 
 
-// =====================================================
-// 7. CONNEXION ADMINISTRATEUR
-// =====================================================
+/* =========================================================
+   7. CONNEXION ADMIN
+   ========================================================= */
 
 async function loginAdmin() {
 
-  const email = emailInput
-    ? emailInput.value.trim()
-    : "";
+  const email =
+    adminEmail
+      ? adminEmail.value.trim()
+      : "";
 
-  const password = passwordInput
-    ? passwordInput.value
-    : "";
+  const password =
+    adminPassword
+      ? adminPassword.value
+      : "";
+
 
   if (!email || !password) {
 
     showMessage(
-      "Veuillez entrer votre adresse e-mail et votre mot de passe.",
-      "error"
+      "Veuillez remplir tous les champs."
     );
 
     return;
   }
 
+
   showMessage(
     "Connexion en cours...",
-    "info"
+    "success"
   );
 
 
   const {
     data,
     error
-  } = await supabaseClient.auth.signInWithPassword({
-    email: email,
-    password: password
-  });
+  } = await supabaseClient
+    .auth
+    .signInWithPassword({
+      email: email,
+      password: password
+    });
 
 
   if (error) {
 
-    console.error("Erreur Supabase :", error);
+    console.error(
+      "Erreur connexion :",
+      error
+    );
 
     showMessage(
-      "Connexion impossible : " + error.message,
-      "error"
+      error.message
     );
 
     return;
   }
 
 
-  // Vérification administrateur
-  const admin = await checkAdmin();
+  const user =
+    data.user;
 
 
-  if (!admin) {
+  const isAdmin =
+    await checkAdmin(user.id);
 
-    await supabaseClient.auth.signOut();
+
+  if (!isAdmin) {
+
+    await supabaseClient
+      .auth
+      .signOut();
 
     showMessage(
-      "Ce compte est connecté, mais il n'est pas administrateur.",
-      "error"
+      "Accès refusé : vous n'êtes pas administrateur."
     );
 
     return;
   }
 
 
-  // Connexion réussie
+  showDashboard(user);
+
   showMessage(
-    "Connexion réussie !",
-    "success"
+    ""
   );
 
 
-  showDashboard(data.user);
-
-
-  // Charger les données
   await loadAllData();
 }
 
 
-// =====================================================
-// 8. DÉCONNEXION
-// =====================================================
+/* =========================================================
+   8. DÉCONNEXION
+   ========================================================= */
 
 async function logoutAdmin() {
 
   const {
     error
-  } = await supabaseClient.auth.signOut();
+  } = await supabaseClient
+    .auth
+    .signOut();
+
 
   if (error) {
 
     console.error(
-      "Erreur lors de la déconnexion :",
+      "Erreur déconnexion :",
       error
     );
 
     return;
   }
 
+
   showLogin();
-
-  if (emailInput) {
-    emailInput.value = "";
-  }
-
-  if (passwordInput) {
-    passwordInput.value = "";
-  }
-
-  if (loginMsg) {
-    loginMsg.textContent = "";
-  }
 }
 
 
-// =====================================================
-// 9. ONGLET
-// =====================================================
+/* =========================================================
+   9. CHANGEMENT D'ONGLET
+   ========================================================= */
 
 function showTab(tabName) {
 
-  const panels =
-    document.querySelectorAll(".tab-panel");
+  const tabs =
+    document.querySelectorAll(
+      ".admin-tab"
+    );
 
-  panels.forEach(panel => {
-    panel.hidden = true;
+  tabs.forEach(function(tab) {
+
+    tab.style.display = "none";
+
   });
 
 
-  const selected =
-    document.getElementById("tab-" + tabName);
+  const selectedTab =
+    document.getElementById(
+      tabName
+    );
 
-  if (selected) {
-    selected.hidden = false;
+
+  if (selectedTab) {
+
+    selectedTab.style.display =
+      "block";
   }
 }
 
 
-// =====================================================
-// 10. CHARGEMENT DES DONNÉES
-// =====================================================
+/* =========================================================
+   10. CHARGER TOUTES LES DONNÉES
+   ========================================================= */
 
 async function loadAllData() {
 
   await loadNews();
+
   await loadBirthdays();
+
   await loadGallery();
+
   await loadVideos();
+
   await loadPromotions();
 }
 
 
-// =====================================================
-// 11. ACTUALITÉS
-// =====================================================
+/* =========================================================
+   11. ACTUALITÉS
+   ========================================================= */
 
 async function loadNews() {
-
-  const container =
-    document.getElementById("admin-news");
-
-  if (!container) return;
-
 
   const {
     data,
@@ -296,19 +306,32 @@ async function loadNews() {
   } = await supabaseClient
     .from("news")
     .select("*")
-    .order("date", { ascending: false });
+    .order(
+      "date",
+      {
+        ascending: false
+      }
+    );
 
 
   if (error) {
 
     console.error(
-      "Erreur chargement actualités :",
+      "Erreur chargement news :",
       error
     );
 
-    container.innerHTML =
-      "<p>Impossible de charger les actualités.</p>";
+    return;
+  }
 
+
+  const container =
+    document.getElementById(
+      "news-list"
+    );
+
+
+  if (!container) {
     return;
   }
 
@@ -316,43 +339,72 @@ async function loadNews() {
   container.innerHTML = "";
 
 
-  data.forEach(item => {
+  (data || []).forEach(function(news) {
 
-    const div =
+    const item =
       document.createElement("div");
 
-    div.className = "admin-item";
+
+    item.className =
+      "admin-item";
 
 
-    div.innerHTML = `
-      <strong>${escapeHTML(item.title || "")}</strong>
-      <small>${escapeHTML(item.date || "")}</small>
-      <p>${escapeHTML(item.text || "")}</p>
+    item.innerHTML = `
+      <h3>${escapeHTML(news.title || "")}</h3>
+
+      <p>
+        <strong>Date :</strong>
+        ${escapeHTML(news.date || "")}
+      </p>
+
+      <p>
+        ${escapeHTML(news.content || "")}
+      </p>
+
+      ${
+        news.image
+          ? `
+            <p>
+              <strong>Image :</strong>
+              ${escapeHTML(news.image)}
+            </p>
+          `
+          : ""
+      }
     `;
 
 
-    container.appendChild(div);
+    container.appendChild(item);
+
   });
 }
 
 
-// =====================================================
-// 12. AJOUTER UNE ACTUALITÉ
-// =====================================================
+/* =========================================================
+   12. AJOUTER UNE ACTUALITÉ
+   ========================================================= */
 
 async function addNews() {
 
   const titleElement =
-    document.getElementById("news-title");
+    document.getElementById(
+      "news-title"
+    );
 
   const dateElement =
-    document.getElementById("news-date");
+    document.getElementById(
+      "news-date"
+    );
 
   const textElement =
-    document.getElementById("news-text");
+    document.getElementById(
+      "news-text"
+    );
 
   const imageElement =
-    document.getElementById("news-image");
+    document.getElementById(
+      "news-image"
+    );
 
 
   const title =
@@ -360,15 +412,18 @@ async function addNews() {
       ? titleElement.value.trim()
       : "";
 
+
   const date =
     dateElement
       ? dateElement.value
       : "";
 
+
   const text =
     textElement
       ? textElement.value.trim()
       : "";
+
 
   const image =
     imageElement
@@ -376,7 +431,6 @@ async function addNews() {
       : "";
 
 
-  // Vérification des champs obligatoires
   if (!title || !date || !text) {
 
     alert(
@@ -392,7 +446,7 @@ async function addNews() {
     {
       title: title,
       date: date,
-      text: text,
+      content: text,
       image: image
     }
   );
@@ -405,16 +459,22 @@ async function addNews() {
       error
     } = await supabaseClient
       .from("news")
-      .insert([{
-        title: title,
-        date: date,
-        text: text,
-        image: image || null
-      }])
+      .insert([
+        {
+          title: title,
+
+          date: date,
+
+          /* IMPORTANT :
+             La colonne Supabase s'appelle content */
+          content: text,
+
+          image: image || null
+        }
+      ])
       .select();
 
 
-    // Erreur Supabase
     if (error) {
 
       console.error(
@@ -422,34 +482,37 @@ async function addNews() {
         error
       );
 
+
       alert(
         "Erreur Supabase :\n\n" +
         error.message
       );
 
+
       return;
     }
 
 
-    // Publication réussie
     console.log(
       "Publication réussie :",
       data
     );
 
 
-    // Vider le formulaire
     if (titleElement) {
       titleElement.value = "";
     }
+
 
     if (dateElement) {
       dateElement.value = "";
     }
 
+
     if (textElement) {
       textElement.value = "";
     }
+
 
     if (imageElement) {
       imageElement.value = "";
@@ -461,7 +524,6 @@ async function addNews() {
     );
 
 
-    // Recharger la liste
     await loadNews();
 
   }
@@ -473,6 +535,7 @@ async function addNews() {
       error
     );
 
+
     alert(
       "Impossible de contacter Supabase.\n\n" +
       error
@@ -481,17 +544,11 @@ async function addNews() {
 }
 
 
-// =====================================================
-// 13. ANNIVERSAIRES
-// =====================================================
+/* =========================================================
+   13. ANNIVERSAIRES
+   ========================================================= */
 
 async function loadBirthdays() {
-
-  const container =
-    document.getElementById("admin-birthdays");
-
-  if (!container) return;
-
 
   const {
     data,
@@ -499,19 +556,32 @@ async function loadBirthdays() {
   } = await supabaseClient
     .from("birthdays")
     .select("*")
-    .order("date", { ascending: true });
+    .order(
+      "date",
+      {
+        ascending: true
+      }
+    );
 
 
   if (error) {
 
     console.error(
-      "Erreur chargement anniversaires :",
+      "Erreur chargement birthdays :",
       error
     );
 
-    container.innerHTML =
-      "<p>Impossible de charger les anniversaires.</p>";
+    return;
+  }
 
+
+  const container =
+    document.getElementById(
+      "birthdays-list"
+    );
+
+
+  if (!container) {
     return;
   }
 
@@ -519,22 +589,41 @@ async function loadBirthdays() {
   container.innerHTML = "";
 
 
-  data.forEach(item => {
+  (data || []).forEach(function(birthday) {
 
-    const div =
+    const item =
       document.createElement("div");
 
-    div.className = "admin-item";
+
+    item.className =
+      "admin-item";
 
 
-    div.innerHTML = `
-      <strong>${escapeHTML(item.name || "")}</strong>
-      <small>${escapeHTML(item.date || "")}</small>
-      <p>${escapeHTML(item.promo || "")}</p>
+    item.innerHTML = `
+      <h3>
+        ${escapeHTML(birthday.name || "")}
+      </h3>
+
+      <p>
+        <strong>Date :</strong>
+        ${escapeHTML(birthday.date || "")}
+      </p>
+
+      ${
+        birthday.promo
+          ? `
+            <p>
+              <strong>Promotion :</strong>
+              ${escapeHTML(birthday.promo)}
+            </p>
+          `
+          : ""
+      }
     `;
 
 
-    container.appendChild(div);
+    container.appendChild(item);
+
   });
 }
 
@@ -542,19 +631,29 @@ async function loadBirthdays() {
 async function addBirthday() {
 
   const name =
-    document.getElementById("bd-name").value.trim();
+    document
+      .getElementById("birthday-name")
+      ?.value
+      .trim() || "";
+
 
   const date =
-    document.getElementById("bd-date").value;
+    document
+      .getElementById("birthday-date")
+      ?.value || "";
+
 
   const promo =
-    document.getElementById("bd-promo").value.trim();
+    document
+      .getElementById("birthday-promo")
+      ?.value
+      .trim() || "";
 
 
   if (!name || !date) {
 
     alert(
-      "Veuillez entrer le nom et la date."
+      "Veuillez remplir le nom et la date."
     );
 
     return;
@@ -565,11 +664,13 @@ async function addBirthday() {
     error
   } = await supabaseClient
     .from("birthdays")
-    .insert([{
-      name: name,
-      date: date,
-      promo: promo || null
-    }]);
+    .insert([
+      {
+        name: name,
+        date: date,
+        promo: promo || null
+      }
+    ]);
 
 
   if (error) {
@@ -585,26 +686,30 @@ async function addBirthday() {
   }
 
 
-  document.getElementById("bd-name").value = "";
-  document.getElementById("bd-date").value = "";
-  document.getElementById("bd-promo").value = "";
+  document.getElementById(
+    "birthday-name"
+  ).value = "";
+
+
+  document.getElementById(
+    "birthday-date"
+  ).value = "";
+
+
+  document.getElementById(
+    "birthday-promo"
+  ).value = "";
 
 
   await loadBirthdays();
 }
 
 
-// =====================================================
-// 14. GALERIE
-// =====================================================
+/* =========================================================
+   14. GALERIE
+   ========================================================= */
 
 async function loadGallery() {
-
-  const container =
-    document.getElementById("admin-gallery");
-
-  if (!container) return;
-
 
   const {
     data,
@@ -612,7 +717,12 @@ async function loadGallery() {
   } = await supabaseClient
     .from("gallery")
     .select("*")
-    .order("date", { ascending: false });
+    .order(
+      "date",
+      {
+        ascending: false
+      }
+    );
 
 
   if (error) {
@@ -622,9 +732,17 @@ async function loadGallery() {
       error
     );
 
-    container.innerHTML =
-      "<p>Impossible de charger la galerie.</p>";
+    return;
+  }
 
+
+  const container =
+    document.getElementById(
+      "gallery-list"
+    );
+
+
+  if (!container) {
     return;
   }
 
@@ -632,22 +750,40 @@ async function loadGallery() {
   container.innerHTML = "";
 
 
-  data.forEach(item => {
+  (data || []).forEach(function(photo) {
 
-    const div =
+    const item =
       document.createElement("div");
 
-    div.className = "admin-item";
+
+    item.className =
+      "admin-item";
 
 
-    div.innerHTML = `
-      <strong>${escapeHTML(item.title || "")}</strong>
-      <small>${escapeHTML(item.date || "")}</small>
-      <p>${escapeHTML(item.image || "")}</p>
+    item.innerHTML = `
+      <h3>
+        ${escapeHTML(photo.title || "")}
+      </h3>
+
+      <p>
+        <strong>Date :</strong>
+        ${escapeHTML(photo.date || "")}
+      </p>
+
+      ${
+        photo.image
+          ? `
+            <p>
+              ${escapeHTML(photo.image)}
+            </p>
+          `
+          : ""
+      }
     `;
 
 
-    container.appendChild(div);
+    container.appendChild(item);
+
   });
 }
 
@@ -655,19 +791,29 @@ async function loadGallery() {
 async function addGallery() {
 
   const title =
-    document.getElementById("gal-title").value.trim();
+    document
+      .getElementById("gallery-title")
+      ?.value
+      .trim() || "";
+
 
   const image =
-    document.getElementById("gal-image").value.trim();
+    document
+      .getElementById("gallery-image")
+      ?.value
+      .trim() || "";
+
 
   const date =
-    document.getElementById("gal-date").value;
+    document
+      .getElementById("gallery-date")
+      ?.value || "";
 
 
-  if (!title || !image || !date) {
+  if (!title || !image) {
 
     alert(
-      "Veuillez remplir le titre, l'image et la date."
+      "Veuillez remplir le titre et l'image."
     );
 
     return;
@@ -678,11 +824,13 @@ async function addGallery() {
     error
   } = await supabaseClient
     .from("gallery")
-    .insert([{
-      title: title,
-      image: image,
-      date: date
-    }]);
+    .insert([
+      {
+        title: title,
+        image: image,
+        date: date || null
+      }
+    ]);
 
 
   if (error) {
@@ -698,34 +846,37 @@ async function addGallery() {
   }
 
 
-  document.getElementById("gal-title").value = "";
-  document.getElementById("gal-image").value = "";
-  document.getElementById("gal-date").value = "";
+  document.getElementById(
+    "gallery-title"
+  ).value = "";
+
+
+  document.getElementById(
+    "gallery-image"
+  ).value = "";
+
+
+  document.getElementById(
+    "gallery-date"
+  ).value = "";
 
 
   await loadGallery();
 }
 
 
-// =====================================================
-// 15. VIDÉOS
-// =====================================================
+/* =========================================================
+   15. VIDÉOS
+   ========================================================= */
 
 async function loadVideos() {
-
-  const container =
-    document.getElementById("admin-videos");
-
-  if (!container) return;
-
 
   const {
     data,
     error
   } = await supabaseClient
     .from("videos")
-    .select("*")
-    .order("id", { ascending: false });
+    .select("*");
 
 
   if (error) {
@@ -735,9 +886,17 @@ async function loadVideos() {
       error
     );
 
-    container.innerHTML =
-      "<p>Impossible de charger les vidéos.</p>";
+    return;
+  }
 
+
+  const container =
+    document.getElementById(
+      "videos-list"
+    );
+
+
+  if (!container) {
     return;
   }
 
@@ -745,21 +904,29 @@ async function loadVideos() {
   container.innerHTML = "";
 
 
-  data.forEach(item => {
+  (data || []).forEach(function(video) {
 
-    const div =
+    const item =
       document.createElement("div");
 
-    div.className = "admin-item";
+
+    item.className =
+      "admin-item";
 
 
-    div.innerHTML = `
-      <strong>${escapeHTML(item.title || "")}</strong>
-      <p>${escapeHTML(item.url || "")}</p>
+    item.innerHTML = `
+      <h3>
+        ${escapeHTML(video.title || "")}
+      </h3>
+
+      <p>
+        ${escapeHTML(video.url || "")}
+      </p>
     `;
 
 
-    container.appendChild(div);
+    container.appendChild(item);
+
   });
 }
 
@@ -767,16 +934,23 @@ async function loadVideos() {
 async function addVideo() {
 
   const title =
-    document.getElementById("vid-title").value.trim();
+    document
+      .getElementById("video-title")
+      ?.value
+      .trim() || "";
+
 
   const url =
-    document.getElementById("vid-url").value.trim();
+    document
+      .getElementById("video-url")
+      ?.value
+      .trim() || "";
 
 
   if (!title || !url) {
 
     alert(
-      "Veuillez entrer le titre et le lien."
+      "Veuillez remplir le titre et l'URL."
     );
 
     return;
@@ -787,10 +961,12 @@ async function addVideo() {
     error
   } = await supabaseClient
     .from("videos")
-    .insert([{
-      title: title,
-      url: url
-    }]);
+    .insert([
+      {
+        title: title,
+        url: url
+      }
+    ]);
 
 
   if (error) {
@@ -806,25 +982,25 @@ async function addVideo() {
   }
 
 
-  document.getElementById("vid-title").value = "";
-  document.getElementById("vid-url").value = "";
+  document.getElementById(
+    "video-title"
+  ).value = "";
+
+
+  document.getElementById(
+    "video-url"
+  ).value = "";
 
 
   await loadVideos();
 }
 
 
-// =====================================================
-// 16. PROMOTIONS
-// =====================================================
+/* =========================================================
+   16. PROMOTIONS
+   ========================================================= */
 
 async function loadPromotions() {
-
-  const container =
-    document.getElementById("admin-promotions");
-
-  if (!container) return;
-
 
   const {
     data,
@@ -832,7 +1008,12 @@ async function loadPromotions() {
   } = await supabaseClient
     .from("promotions")
     .select("*")
-    .order("id", { ascending: false });
+    .order(
+      "year",
+      {
+        ascending: false
+      }
+    );
 
 
   if (error) {
@@ -842,9 +1023,17 @@ async function loadPromotions() {
       error
     );
 
-    container.innerHTML =
-      "<p>Impossible de charger les promotions.</p>";
+    return;
+  }
 
+
+  const container =
+    document.getElementById(
+      "promotions-list"
+    );
+
+
+  if (!container) {
     return;
   }
 
@@ -852,22 +1041,40 @@ async function loadPromotions() {
   container.innerHTML = "";
 
 
-  data.forEach(item => {
+  (data || []).forEach(function(promotion) {
 
-    const div =
+    const item =
       document.createElement("div");
 
-    div.className = "admin-item";
+
+    item.className =
+      "admin-item";
 
 
-    div.innerHTML = `
-      <strong>${escapeHTML(item.number || "")}</strong>
-      <small>${escapeHTML(item.year || "")}</small>
-      <p>${escapeHTML(item.text || "")}</p>
+    item.innerHTML = `
+      <h3>
+        ${escapeHTML(
+          promotion.number?.toString() || ""
+        )}
+      </h3>
+
+      <p>
+        <strong>Année :</strong>
+        ${escapeHTML(
+          promotion.year?.toString() || ""
+        )}
+      </p>
+
+      <p>
+        ${escapeHTML(
+          promotion.text || ""
+        )}
+      </p>
     `;
 
 
-    container.appendChild(div);
+    container.appendChild(item);
+
   });
 }
 
@@ -875,13 +1082,23 @@ async function loadPromotions() {
 async function addPromotion() {
 
   const number =
-    document.getElementById("promo-number").value.trim();
+    document
+      .getElementById("promotion-number")
+      ?.value
+      .trim() || "";
+
 
   const year =
-    document.getElementById("promo-year").value.trim();
+    document
+      .getElementById("promotion-year")
+      ?.value || "";
+
 
   const text =
-    document.getElementById("promo-text").value.trim();
+    document
+      .getElementById("promotion-text")
+      ?.value
+      .trim() || "";
 
 
   if (!number || !year || !text) {
@@ -898,11 +1115,13 @@ async function addPromotion() {
     error
   } = await supabaseClient
     .from("promotions")
-    .insert([{
-      number: number,
-      year: year,
-      text: text
-    }]);
+    .insert([
+      {
+        number: number,
+        year: year,
+        text: text
+      }
+    ]);
 
 
   if (error) {
@@ -918,18 +1137,28 @@ async function addPromotion() {
   }
 
 
-  document.getElementById("promo-number").value = "";
-  document.getElementById("promo-year").value = "";
-  document.getElementById("promo-text").value = "";
+  document.getElementById(
+    "promotion-number"
+  ).value = "";
+
+
+  document.getElementById(
+    "promotion-year"
+  ).value = "";
+
+
+  document.getElementById(
+    "promotion-text"
+  ).value = "";
 
 
   await loadPromotions();
 }
 
 
-// =====================================================
-// 17. EXPORTATION DES DONNÉES
-// =====================================================
+/* =========================================================
+   17. EXPORTATION DES DONNÉES
+   ========================================================= */
 
 async function exportData() {
 
@@ -940,6 +1169,7 @@ async function exportData() {
     "videos",
     "promotions"
   ];
+
 
   const result = {};
 
@@ -961,18 +1191,24 @@ async function exportData() {
         error
       );
 
-      result[table] = [];
-
-    } else {
-
-      result[table] = data;
+      continue;
     }
+
+
+    result[table] =
+      data || [];
   }
 
 
   const blob =
     new Blob(
-      [JSON.stringify(result, null, 2)],
+      [
+        JSON.stringify(
+          result,
+          null,
+          2
+        )
+      ],
       {
         type: "application/json"
       }
@@ -986,51 +1222,74 @@ async function exportData() {
   const link =
     document.createElement("a");
 
+
   link.href = url;
 
   link.download =
-    "clan-saint-marc-donnees.json";
+    "clan-saint-marc-data.json";
+
+
+  document.body.appendChild(link);
 
   link.click();
+
+  link.remove();
 
 
   URL.revokeObjectURL(url);
 }
 
 
-// =====================================================
-// 18. PROTECTION CONTRE L'INJECTION HTML
-// =====================================================
+/* =========================================================
+   18. PROTECTION HTML
+   ========================================================= */
 
 function escapeHTML(value) {
 
   return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 }
 
 
-// =====================================================
-// 19. INITIALISATION
-// =====================================================
+/* =========================================================
+   19. AU CHARGEMENT DE LA PAGE
+   ========================================================= */
 
 document.addEventListener(
   "DOMContentLoaded",
-  async () => {
+  async function() {
 
-    // Par défaut, seul le premier onglet est visible
     showTab("news");
 
 
-    // Vérifier la session existante
     const {
-      data: {
-        session
-      }
-    } = await supabaseClient.auth.getSession();
+      data
+    } = await supabaseClient
+      .auth
+      .getSession();
+
+
+    const session =
+      data.session;
 
 
     if (!session) {
@@ -1041,13 +1300,19 @@ document.addEventListener(
     }
 
 
-    // Vérifier que la session appartient à un admin
-    const admin = await checkAdmin();
+    const user =
+      session.user;
 
 
-    if (!admin) {
+    const isAdmin =
+      await checkAdmin(user.id);
 
-      await supabaseClient.auth.signOut();
+
+    if (!isAdmin) {
+
+      await supabaseClient
+        .auth
+        .signOut();
 
       showLogin();
 
@@ -1055,27 +1320,42 @@ document.addEventListener(
     }
 
 
-    // Administrateur déjà connecté
-    showDashboard(session.user);
+    showDashboard(user);
+
 
     await loadAllData();
+
   }
 );
 
 
-// =====================================================
-// 20. RENDRE LES FONCTIONS ACCESSIBLES AUX BOUTONS HTML
-// =====================================================
+/* =========================================================
+   20. RENDRE LES FONCTIONS ACCESSIBLES À admin.html
+   ========================================================= */
 
-window.loginAdmin = loginAdmin;
-window.logoutAdmin = logoutAdmin;
+window.loginAdmin =
+  loginAdmin;
 
-window.showTab = showTab;
+window.logoutAdmin =
+  logoutAdmin;
 
-window.addNews = addNews;
-window.addBirthday = addBirthday;
-window.addGallery = addGallery;
-window.addVideo = addVideo;
-window.addPromotion = addPromotion;
+window.showTab =
+  showTab;
 
-window.exportData = exportData;
+window.addNews =
+  addNews;
+
+window.addBirthday =
+  addBirthday;
+
+window.addGallery =
+  addGallery;
+
+window.addVideo =
+  addVideo;
+
+window.addPromotion =
+  addPromotion;
+
+window.exportData =
+  exportData;
