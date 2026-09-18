@@ -139,55 +139,90 @@
     </div>
 
 
+    <!-- ONGLETS -->
+
     <div class="tabs">
 
-      <button type="button" onclick="showTab('news')">
+      <button
+        type="button"
+        onclick="showTab('news')">
+
         Actualités
+
       </button>
 
-      <button type="button" onclick="showTab('birthdays')">
+
+      <button
+        type="button"
+        onclick="showTab('birthdays')">
+
         Anniversaires
+
       </button>
 
-      <button type="button" onclick="showTab('gallery')">
+
+      <button
+        type="button"
+        onclick="showTab('gallery')">
+
         Galerie
+
       </button>
 
-      <button type="button" onclick="showTab('videos')">
+
+      <button
+        type="button"
+        onclick="showTab('videos')">
+
         Vidéos
+
       </button>
 
-      <button type="button" onclick="showTab('promotions')">
+
+      <button
+        type="button"
+        onclick="showTab('promotions')">
+
         Promotions
+
       </button>
 
     </div>
 
 
-    <!-- ACTUALITÉS -->
+    <!-- =================================================
+         ACTUALITÉS
+         ================================================= -->
 
-    <div id="tab-news"
+    <div id="news"
          class="tab-panel">
 
       <h4>
         Ajouter une actualité
       </h4>
 
+
       <input
         id="news-title"
+        type="text"
         placeholder="Titre">
+
 
       <input
         id="news-date"
         type="date">
 
+
       <textarea
         id="news-text"
         placeholder="Texte de l'actualité"></textarea>
 
+
       <input
         id="news-image"
+        type="text"
         placeholder="URL de l'image (facultatif)">
+
 
       <button
         class="btn primary"
@@ -199,16 +234,18 @@
       </button>
 
 
-      <div id="admin-news"
+      <div id="news-list"
            class="admin-list">
       </div>
 
     </div>
 
 
-    <!-- ANNIVERSAIRES -->
+    <!-- =================================================
+         ANNIVERSAIRES
+         ================================================= -->
 
-    <div id="tab-birthdays"
+    <div id="birthdays"
          class="tab-panel"
          hidden>
 
@@ -216,17 +253,23 @@
         Ajouter un anniversaire
       </h4>
 
+
       <input
-        id="bd-name"
+        id="birthday-name"
+        type="text"
         placeholder="Nom du membre">
 
-      <input
-        id="bd-date"
-        type="date">
 
       <input
-        id="bd-promo"
+        id="birthday-date"
+        type="date">
+
+
+      <input
+        id="birthday-promo"
+        type="text"
         placeholder="Promotion (facultatif)">
+
 
       <button
         class="btn primary"
@@ -238,16 +281,18 @@
       </button>
 
 
-      <div id="admin-birthdays"
+      <div id="birthdays-list"
            class="admin-list">
       </div>
 
     </div>
 
 
-    <!-- GALERIE -->
+    <!-- =================================================
+         GALERIE
+         ================================================= -->
 
-    <div id="tab-gallery"
+    <div id="gallery"
          class="tab-panel"
          hidden>
 
@@ -255,17 +300,23 @@
         Ajouter une photo
       </h4>
 
+
       <input
-        id="gal-title"
+        id="gallery-title"
+        type="text"
         placeholder="Titre / activité">
 
-      <input
-        id="gal-image"
-        placeholder="URL publique de l'image">
 
       <input
-        id="gal-date"
+        id="gallery-image"
+        type="text"
+        placeholder="URL publique de l'image">
+
+
+      <input
+        id="gallery-date"
         type="date">
+
 
       <button
         class="btn primary"
@@ -278,21 +329,25 @@
 
 
       <p class="hint">
+
         Pour l'instant, utilise une URL publique d'image.
         Le stockage Supabase pourra être ajouté ensuite.
+
       </p>
 
 
-      <div id="admin-gallery"
+      <div id="gallery-list"
            class="admin-list">
       </div>
 
     </div>
 
 
-    <!-- VIDÉOS -->
+    <!-- =================================================
+         VIDÉOS
+         ================================================= -->
 
-    <div id="tab-videos"
+    <div id="videos"
          class="tab-panel"
          hidden>
 
@@ -300,13 +355,18 @@
         Ajouter une vidéo
       </h4>
 
-      <input
-        id="vid-title"
-        placeholder="Titre">
 
       <input
-        id="vid-url"
+        id="video-title"
+        type="text"
+        placeholder="Titre">
+
+
+      <input
+        id="video-url"
+        type="text"
         placeholder="Lien TikTok, Facebook, YouTube...">
+
 
       <button
         class="btn primary"
@@ -318,16 +378,18 @@
       </button>
 
 
-      <div id="admin-videos"
+      <div id="videos-list"
            class="admin-list">
       </div>
 
     </div>
 
 
-    <!-- PROMOTIONS -->
+    <!-- =================================================
+         PROMOTIONS
+         ================================================= -->
 
-    <div id="tab-promotions"
+    <div id="promotions"
          class="tab-panel"
          hidden>
 
@@ -335,17 +397,24 @@
         Historique des promotions
       </h4>
 
+
       <input
-        id="promo-number"
+        id="promotion-number"
+        type="text"
         placeholder="Ex. 39e">
 
-      <input
-        id="promo-year"
-        placeholder="Année">
 
       <input
-        id="promo-text"
+        id="promotion-year"
+        type="text"
+        placeholder="Année">
+
+
+      <input
+        id="promotion-text"
+        type="text"
         placeholder="Informations">
+
 
       <button
         class="btn primary"
@@ -357,17 +426,20 @@
       </button>
 
 
-      <div id="admin-promotions"
+      <div id="promotions-list"
            class="admin-list">
       </div>
 
     </div>
 
 
+    <!-- OUTILS -->
+
     <div class="data-tools">
 
-      <button type="button"
-              onclick="exportData()">
+      <button
+        type="button"
+        onclick="exportData()">
 
         Exporter les données
 
@@ -379,6 +451,7 @@
     <p class="warning">
 
       <strong>Sécurité :</strong>
+
       les modifications sont protégées par Supabase Auth
       et par les politiques RLS de la base de données.
 
@@ -397,12 +470,24 @@
   <img src="logo.jpg"
        alt="Logo">
 
+
   <div>
-    <strong>CLAN SAINT MARC</strong>
-    <span>Groupe Kizito-Anuarite</span>
+
+    <strong>
+      CLAN SAINT MARC
+    </strong>
+
+    <span>
+      Groupe Kizito-Anuarite
+    </span>
+
   </div>
 
-  <p>© 2026 Clan Saint Marc</p>
+
+  <p>
+    © 2026 Clan Saint Marc
+  </p>
+
 
   <a href="index.html">
     Retour au site
@@ -411,30 +496,54 @@
 </footer>
 
 
-<!-- SUPABASE -->
+<!-- =====================================================
+     SUPABASE
+     ===================================================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- CONFIGURATION SUPABASE -->
+
+<!-- =====================================================
+     CONFIGURATION SUPABASE
+     ===================================================== -->
 
 <script src="config.js"></script>
 
-<!-- SCRIPT ADMINISTRATION -->
 
-<script src="admin.js"></script>
+<!-- =====================================================
+     SCRIPT ADMINISTRATION
+
+     ?v=20260918-2 force le navigateur à charger
+     la nouvelle version du fichier.
+     ===================================================== -->
+
+<script src="admin.js?v=20260918-2"></script>
 
 
-<!-- DIAGNOSTIC TEMPORAIRE -->
+<!-- DIAGNOSTIC -->
 
 <script>
 
+console.log("=================================");
+console.log("CLAN SAINT MARC - ADMIN");
 console.log("admin.html chargé");
-console.log("Supabase disponible :", typeof supabase !== "undefined");
-console.log("loginAdmin disponible :", typeof window.loginAdmin === "function");
+console.log(
+  "Supabase disponible :",
+  typeof supabase !== "undefined"
+);
+console.log(
+  "loginAdmin disponible :",
+  typeof window.loginAdmin === "function"
+);
+console.log(
+  "addNews disponible :",
+  typeof window.addNews === "function"
+);
+console.log("=================================");
 
 </script>
 
 
 </body>
-</html>
 
+</html>
