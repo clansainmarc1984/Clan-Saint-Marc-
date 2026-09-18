@@ -1,6 +1,11 @@
 // =====================================================
 // ADMIN.JS — CLAN SAINT MARC
-// Connexion administrateur avec Supabase
+// Administration + Supabase
+// =====================================================
+
+
+// =====================================================
+// 1. CONNEXION SUPABASE
 // =====================================================
 
 const supabaseClient = window.supabase.createClient(
@@ -9,64 +14,56 @@ const supabaseClient = window.supabase.createClient(
 );
 
 
-// -----------------------------------------------------
-// Éléments du formulaire
-// -----------------------------------------------------
+// =====================================================
+// 2. ÉLÉMENTS HTML
+// =====================================================
+
+const loginBox = document.getElementById("login-box");
+const dashboard = document.getElementById("dashboard");
 
 const emailInput = document.getElementById("admin-email");
 const passwordInput = document.getElementById("admin-password");
 
-// On récupère le formulaire directement depuis le champ e-mail
-const loginForm = emailInput ? emailInput.closest("form") : null;
+const loginMsg = document.getElementById("login-msg");
+const adminUser = document.getElementById("admin-user");
 
 
-// -----------------------------------------------------
-// Message de connexion
-// -----------------------------------------------------
+// =====================================================
+// 3. MESSAGE
+// =====================================================
 
 function showMessage(message, type = "error") {
 
-  let messageElement = document.getElementById("admin-login-message");
+  if (!loginMsg) return;
 
-  // S'il n'existe pas dans le HTML, on le crée automatiquement
-  if (!messageElement && loginForm) {
+  loginMsg.textContent = message;
 
-    messageElement = document.createElement("p");
-
-    messageElement.id = "admin-login-message";
-
-    messageElement.style.marginTop = "12px";
-
-    loginForm.appendChild(messageElement);
+  if (type === "success") {
+    loginMsg.style.color = "#2e7d32";
   }
 
-  if (!messageElement) return;
+  else if (type === "info") {
+    loginMsg.style.color = "#555";
+  }
 
-  messageElement.textContent = message;
-
-  if (type === "error") {
-    messageElement.style.color = "#d32f2f";
-  } else if (type === "success") {
-    messageElement.style.color = "#2e7d32";
-  } else {
-    messageElement.style.color = "#555";
+  else {
+    loginMsg.style.color = "#d32f2f";
   }
 }
 
 
-// -----------------------------------------------------
-// Vérifier si l'utilisateur est administrateur
-// -----------------------------------------------------
+// =====================================================
+// 4. VÉRIFIER SI L'UTILISATEUR EST ADMIN
+// =====================================================
 
 async function checkAdmin() {
 
   const {
-    data: {
-      user
-    }
+    data: { user },
+    error: userError
   } = await supabaseClient.auth.getUser();
 
-  if (!user) {
+  if (userError || !user) {
     return false;
   }
 
@@ -77,7 +74,7 @@ async function checkAdmin() {
 
   if (error) {
 
-    console.error("Erreur is_admin :", error);
+    console.error("Erreur RPC is_admin :", error);
 
     return false;
   }
@@ -86,16 +83,57 @@ async function checkAdmin() {
 }
 
 
-// -----------------------------------------------------
-// Connexion
-// -----------------------------------------------------
+// =====================================================
+// 5. AFFICHER LE TABLEAU DE BORD
+// =====================================================
 
-async function loginAdmin(event) {
+function showDashboard(user) {
 
-  event.preventDefault();
+  if (loginBox) {
+    loginBox.hidden = true;
+  }
 
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
+  if (dashboard) {
+    dashboard.hidden = false;
+  }
+
+  if (adminUser && user) {
+
+    adminUser.textContent =
+      user.email || "Administrateur connecté";
+  }
+}
+
+
+// =====================================================
+// 6. AFFICHER LA CONNEXION
+// =====================================================
+
+function showLogin() {
+
+  if (loginBox) {
+    loginBox.hidden = false;
+  }
+
+  if (dashboard) {
+    dashboard.hidden = true;
+  }
+}
+
+
+// =====================================================
+// 7. CONNEXION ADMINISTRATEUR
+// =====================================================
+
+async function loginAdmin() {
+
+  const email = emailInput
+    ? emailInput.value.trim()
+    : "";
+
+  const password = passwordInput
+    ? passwordInput.value
+    : "";
 
   if (!email || !password) {
 
@@ -107,7 +145,11 @@ async function loginAdmin(event) {
     return;
   }
 
-  showMessage("Connexion en cours...", "info");
+  showMessage(
+    "Connexion en cours...",
+    "info"
+  );
+
 
   const {
     data,
@@ -116,6 +158,7 @@ async function loginAdmin(event) {
     email: email,
     password: password
   });
+
 
   if (error) {
 
@@ -130,8 +173,9 @@ async function loginAdmin(event) {
   }
 
 
-  // Vérification du statut administrateur
+  // Vérification administrateur
   const admin = await checkAdmin();
+
 
   if (!admin) {
 
@@ -152,32 +196,18 @@ async function loginAdmin(event) {
     "success"
   );
 
-  // Chercher le tableau de bord
-  const dashboard =
-    document.getElementById("admin-dashboard") ||
-    document.getElementById("dashboard");
 
-  if (dashboard) {
-    dashboard.style.display = "block";
-  }
+  showDashboard(data.user);
 
 
-  // Cacher la zone de connexion si elle possède un conteneur
-  const loginSection =
-    document.getElementById("admin-login") ||
-    document.getElementById("login-section") ||
-    document.getElementById("loginSection");
-
-  if (loginSection) {
-    loginSection.style.display = "none";
-  }
-
+  // Charger les données
+  await loadAllData();
 }
 
 
-// -----------------------------------------------------
-// Déconnexion
-// -----------------------------------------------------
+// =====================================================
+// 8. DÉCONNEXION
+// =====================================================
 
 async function logoutAdmin() {
 
@@ -187,80 +217,777 @@ async function logoutAdmin() {
 
   if (error) {
 
-    console.error("Erreur déconnexion :", error);
+    console.error(
+      "Erreur lors de la déconnexion :",
+      error
+    );
 
     return;
   }
 
-  window.location.reload();
+  showLogin();
+
+  if (emailInput) {
+    emailInput.value = "";
+  }
+
+  if (passwordInput) {
+    passwordInput.value = "";
+  }
+
+  if (loginMsg) {
+    loginMsg.textContent = "";
+  }
 }
 
 
-// -----------------------------------------------------
-// Initialisation
-// -----------------------------------------------------
+// =====================================================
+// 9. ONGLET
+// =====================================================
 
-document.addEventListener("DOMContentLoaded", async () => {
+function showTab(tabName) {
 
-  // Vérifier que les champs existent
-  if (!emailInput || !passwordInput) {
+  const panels =
+    document.querySelectorAll(".tab-panel");
 
-    console.error(
-      "ERREUR : admin-email ou admin-password introuvable."
-    );
+  panels.forEach(panel => {
+    panel.hidden = true;
+  });
 
-    return;
+
+  const selected =
+    document.getElementById("tab-" + tabName);
+
+  if (selected) {
+    selected.hidden = false;
   }
+}
 
 
-  // Vérifier que le formulaire existe
-  if (!loginForm) {
+// =====================================================
+// 10. CHARGEMENT DES DONNÉES
+// =====================================================
 
-    console.error(
-      "ERREUR : aucun formulaire trouvé autour de admin-email."
-    );
+async function loadAllData() {
 
-    return;
-  }
-
-
-  // Brancher la connexion sur le formulaire
-  loginForm.addEventListener("submit", loginAdmin);
+  await loadNews();
+  await loadBirthdays();
+  await loadGallery();
+  await loadVideos();
+  await loadPromotions();
+}
 
 
-  // Vérifier s'il existe déjà une session
+// =====================================================
+// 11. ACTUALITÉS
+// =====================================================
+
+async function loadNews() {
+
+  const container =
+    document.getElementById("admin-news");
+
+  if (!container) return;
+
+
   const {
-    data: {
-      session
+    data,
+    error
+  } = await supabaseClient
+    .from("news")
+    .select("*")
+    .order("date", { ascending: false });
+
+
+  if (error) {
+
+    console.error("Erreur chargement actualités :", error);
+
+    container.innerHTML =
+      "<p>Impossible de charger les actualités.</p>";
+
+    return;
+  }
+
+
+  container.innerHTML = "";
+
+
+  data.forEach(item => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "admin-item";
+
+
+    div.innerHTML = `
+      <strong>${escapeHTML(item.title || "")}</strong>
+      <small>${escapeHTML(item.date || "")}</small>
+      <p>${escapeHTML(item.text || "")}</p>
+    `;
+
+
+    container.appendChild(div);
+  });
+}
+
+
+async function addNews() {
+
+  const title =
+    document.getElementById("news-title").value.trim();
+
+  const date =
+    document.getElementById("news-date").value;
+
+  const text =
+    document.getElementById("news-text").value.trim();
+
+  const image =
+    document.getElementById("news-image").value.trim();
+
+
+  if (!title || !date || !text) {
+
+    alert(
+      "Veuillez remplir le titre, la date et le texte."
+    );
+
+    return;
+  }
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("news")
+    .insert([{
+      title: title,
+      date: date,
+      text: text,
+      image: image || null
+    }]);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Erreur lors de la publication : " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  document.getElementById("news-title").value = "";
+  document.getElementById("news-date").value = "";
+  document.getElementById("news-text").value = "";
+  document.getElementById("news-image").value = "";
+
+
+  await loadNews();
+}
+
+
+// =====================================================
+// 12. ANNIVERSAIRES
+// =====================================================
+
+async function loadBirthdays() {
+
+  const container =
+    document.getElementById("admin-birthdays");
+
+  if (!container) return;
+
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("birthdays")
+    .select("*")
+    .order("date", { ascending: true });
+
+
+  if (error) {
+
+    console.error(
+      "Erreur chargement anniversaires :",
+      error
+    );
+
+    container.innerHTML =
+      "<p>Impossible de charger les anniversaires.</p>";
+
+    return;
+  }
+
+
+  container.innerHTML = "";
+
+
+  data.forEach(item => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "admin-item";
+
+
+    div.innerHTML = `
+      <strong>${escapeHTML(item.name || "")}</strong>
+      <small>${escapeHTML(item.date || "")}</small>
+      <p>${escapeHTML(item.promo || "")}</p>
+    `;
+
+
+    container.appendChild(div);
+  });
+}
+
+
+async function addBirthday() {
+
+  const name =
+    document.getElementById("bd-name").value.trim();
+
+  const date =
+    document.getElementById("bd-date").value;
+
+  const promo =
+    document.getElementById("bd-promo").value.trim();
+
+
+  if (!name || !date) {
+
+    alert(
+      "Veuillez entrer le nom et la date."
+    );
+
+    return;
+  }
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("birthdays")
+    .insert([{
+      name: name,
+      date: date,
+      promo: promo || null
+    }]);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Erreur lors de l'ajout : " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  document.getElementById("bd-name").value = "";
+  document.getElementById("bd-date").value = "";
+  document.getElementById("bd-promo").value = "";
+
+
+  await loadBirthdays();
+}
+
+
+// =====================================================
+// 13. GALERIE
+// =====================================================
+
+async function loadGallery() {
+
+  const container =
+    document.getElementById("admin-gallery");
+
+  if (!container) return;
+
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("gallery")
+    .select("*")
+    .order("date", { ascending: false });
+
+
+  if (error) {
+
+    console.error(
+      "Erreur chargement galerie :",
+      error
+    );
+
+    container.innerHTML =
+      "<p>Impossible de charger la galerie.</p>";
+
+    return;
+  }
+
+
+  container.innerHTML = "";
+
+
+  data.forEach(item => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "admin-item";
+
+
+    div.innerHTML = `
+      <strong>${escapeHTML(item.title || "")}</strong>
+      <small>${escapeHTML(item.date || "")}</small>
+      <p>${escapeHTML(item.image || "")}</p>
+    `;
+
+
+    container.appendChild(div);
+  });
+}
+
+
+async function addGallery() {
+
+  const title =
+    document.getElementById("gal-title").value.trim();
+
+  const image =
+    document.getElementById("gal-image").value.trim();
+
+  const date =
+    document.getElementById("gal-date").value;
+
+
+  if (!title || !image || !date) {
+
+    alert(
+      "Veuillez remplir le titre, l'image et la date."
+    );
+
+    return;
+  }
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("gallery")
+    .insert([{
+      title: title,
+      image: image,
+      date: date
+    }]);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Erreur lors de l'ajout : " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  document.getElementById("gal-title").value = "";
+  document.getElementById("gal-image").value = "";
+  document.getElementById("gal-date").value = "";
+
+
+  await loadGallery();
+}
+
+
+// =====================================================
+// 14. VIDÉOS
+// =====================================================
+
+async function loadVideos() {
+
+  const container =
+    document.getElementById("admin-videos");
+
+  if (!container) return;
+
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("videos")
+    .select("*")
+    .order("id", { ascending: false });
+
+
+  if (error) {
+
+    console.error(
+      "Erreur chargement vidéos :",
+      error
+    );
+
+    container.innerHTML =
+      "<p>Impossible de charger les vidéos.</p>";
+
+    return;
+  }
+
+
+  container.innerHTML = "";
+
+
+  data.forEach(item => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "admin-item";
+
+
+    div.innerHTML = `
+      <strong>${escapeHTML(item.title || "")}</strong>
+      <p>${escapeHTML(item.url || "")}</p>
+    `;
+
+
+    container.appendChild(div);
+  });
+}
+
+
+async function addVideo() {
+
+  const title =
+    document.getElementById("vid-title").value.trim();
+
+  const url =
+    document.getElementById("vid-url").value.trim();
+
+
+  if (!title || !url) {
+
+    alert(
+      "Veuillez entrer le titre et le lien."
+    );
+
+    return;
+  }
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("videos")
+    .insert([{
+      title: title,
+      url: url
+    }]);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Erreur lors de l'ajout : " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  document.getElementById("vid-title").value = "";
+  document.getElementById("vid-url").value = "";
+
+
+  await loadVideos();
+}
+
+
+// =====================================================
+// 15. PROMOTIONS
+// =====================================================
+
+async function loadPromotions() {
+
+  const container =
+    document.getElementById("admin-promotions");
+
+  if (!container) return;
+
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("promotions")
+    .select("*")
+    .order("id", { ascending: false });
+
+
+  if (error) {
+
+    console.error(
+      "Erreur chargement promotions :",
+      error
+    );
+
+    container.innerHTML =
+      "<p>Impossible de charger les promotions.</p>";
+
+    return;
+  }
+
+
+  container.innerHTML = "";
+
+
+  data.forEach(item => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "admin-item";
+
+
+    div.innerHTML = `
+      <strong>${escapeHTML(item.number || "")}</strong>
+      <small>${escapeHTML(item.year || "")}</small>
+      <p>${escapeHTML(item.text || "")}</p>
+    `;
+
+
+    container.appendChild(div);
+  });
+}
+
+
+async function addPromotion() {
+
+  const number =
+    document.getElementById("promo-number").value.trim();
+
+  const year =
+    document.getElementById("promo-year").value.trim();
+
+  const text =
+    document.getElementById("promo-text").value.trim();
+
+
+  if (!number || !year || !text) {
+
+    alert(
+      "Veuillez remplir tous les champs."
+    );
+
+    return;
+  }
+
+
+  const {
+    error
+  } = await supabaseClient
+    .from("promotions")
+    .insert([{
+      number: number,
+      year: year,
+      text: text
+    }]);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Erreur lors de l'ajout : " +
+      error.message
+    );
+
+    return;
+  }
+
+
+  document.getElementById("promo-number").value = "";
+  document.getElementById("promo-year").value = "";
+  document.getElementById("promo-text").value = "";
+
+
+  await loadPromotions();
+}
+
+
+// =====================================================
+// 16. EXPORTATION DES DONNÉES
+// =====================================================
+
+async function exportData() {
+
+  const tables = [
+    "news",
+    "birthdays",
+    "gallery",
+    "videos",
+    "promotions"
+  ];
+
+  const result = {};
+
+
+  for (const table of tables) {
+
+    const {
+      data,
+      error
+    } = await supabaseClient
+      .from(table)
+      .select("*");
+
+
+    if (error) {
+
+      console.error(
+        "Erreur export " + table + " :",
+        error
+      );
+
+      result[table] = [];
+
+    } else {
+
+      result[table] = data;
     }
-  } = await supabaseClient.auth.getSession();
+  }
 
 
-  if (session) {
+  const blob =
+    new Blob(
+      [JSON.stringify(result, null, 2)],
+      {
+        type: "application/json"
+      }
+    );
 
+
+  const url =
+    URL.createObjectURL(blob);
+
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+
+  link.download =
+    "clan-saint-marc-donnees.json";
+
+  link.click();
+
+
+  URL.revokeObjectURL(url);
+}
+
+
+// =====================================================
+// 17. PROTECTION CONTRE L'INJECTION HTML
+// =====================================================
+
+function escapeHTML(value) {
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+// =====================================================
+// 18. INITIALISATION
+// =====================================================
+
+document.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+
+    // Par défaut, seul le premier onglet est visible
+    showTab("news");
+
+
+    // Vérifier la session existante
+    const {
+      data: {
+        session
+      }
+    } = await supabaseClient.auth.getSession();
+
+
+    if (!session) {
+
+      showLogin();
+
+      return;
+    }
+
+
+    // Vérifier que la session appartient à un admin
     const admin = await checkAdmin();
 
-    if (admin) {
 
-      const dashboard =
-        document.getElementById("admin-dashboard") ||
-        document.getElementById("dashboard");
+    if (!admin) {
 
-      const loginSection =
-        document.getElementById("admin-login") ||
-        document.getElementById("login-section") ||
-        document.getElementById("loginSection");
+      await supabaseClient.auth.signOut();
 
-      if (dashboard) {
-        dashboard.style.display = "block";
-      }
+      showLogin();
 
-      if (loginSection) {
-        loginSection.style.display = "none";
-      }
-
+      return;
     }
 
-  }
 
-});
+    // Administrateur déjà connecté
+    showDashboard(session.user);
+
+    await loadAllData();
+  }
+);
+
+
+// =====================================================
+// 19. RENDRE LES FONCTIONS ACCESSIBLES AUX BOUTONS HTML
+// =====================================================
+
+window.loginAdmin = loginAdmin;
+window.logoutAdmin = logoutAdmin;
+
+window.showTab = showTab;
+
+window.addNews = addNews;
+window.addBirthday = addBirthday;
+window.addGallery = addGallery;
+window.addVideo = addVideo;
+window.addPromotion = addPromotion;
+
+window.exportData = exportData;
