@@ -88,7 +88,9 @@
 
 
     <button
+      id="login-button"
       class="btn primary"
+      type="button"
       onclick="loginAdmin()">
 
       Se connecter
@@ -127,6 +129,7 @@
 
       <button
         class="btn small"
+        type="button"
         onclick="logoutAdmin()">
 
         Se déconnecter
@@ -138,23 +141,23 @@
 
     <div class="tabs">
 
-      <button onclick="showTab('news')">
+      <button type="button" onclick="showTab('news')">
         Actualités
       </button>
 
-      <button onclick="showTab('birthdays')">
+      <button type="button" onclick="showTab('birthdays')">
         Anniversaires
       </button>
 
-      <button onclick="showTab('gallery')">
+      <button type="button" onclick="showTab('gallery')">
         Galerie
       </button>
 
-      <button onclick="showTab('videos')">
+      <button type="button" onclick="showTab('videos')">
         Vidéos
       </button>
 
-      <button onclick="showTab('promotions')">
+      <button type="button" onclick="showTab('promotions')">
         Promotions
       </button>
 
@@ -180,8 +183,7 @@
 
       <textarea
         id="news-text"
-        placeholder="Texte de l'actualité">
-      </textarea>
+        placeholder="Texte de l'actualité"></textarea>
 
       <input
         id="news-image"
@@ -189,6 +191,7 @@
 
       <button
         class="btn primary"
+        type="button"
         onclick="addNews()">
 
         Publier
@@ -227,6 +230,7 @@
 
       <button
         class="btn primary"
+        type="button"
         onclick="addBirthday()">
 
         Ajouter
@@ -265,6 +269,7 @@
 
       <button
         class="btn primary"
+        type="button"
         onclick="addGallery()">
 
         Ajouter
@@ -305,6 +310,7 @@
 
       <button
         class="btn primary"
+        type="button"
         onclick="addVideo()">
 
         Ajouter
@@ -343,6 +349,7 @@
 
       <button
         class="btn primary"
+        type="button"
         onclick="addPromotion()">
 
         Ajouter
@@ -359,8 +366,11 @@
 
     <div class="data-tools">
 
-      <button onclick="exportData()">
+      <button type="button"
+              onclick="exportData()">
+
         Exporter les données
+
       </button>
 
     </div>
@@ -401,11 +411,35 @@
 </footer>
 
 
+<!-- SUPABASE -->
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- CONFIGURATION SUPABASE -->
 
 <script src="config.js"></script>
 
+<!-- SCRIPT ADMINISTRATION -->
+
 <script src="admin.js"></script>
+
+
+<!-- DIAGNOSTIC TEMPORAIRE -->
+
+<script>
+
+console.log("admin.html chargé");
+console.log("Supabase disponible :", typeof supabase !== "undefined");
+console.log("loginAdmin disponible :", typeof window.loginAdmin === "function");
+
+</script>
+
 
 </body>
 </html>
+
+Important : cette modification de "admin.html" ne règle pas encore la connexion elle-même. Elle nous permet de déterminer précisément où ça bloque.
+
+Après avoir remplacé ton "admin.html", ne touche pas encore à "admin.js".
+
+Recharge la page et clique sur Se connecter. Si ça ne fait toujours rien, envoie-moi une capture de la console du navigateur (F12 → Console), et on identifiera directement l'erreur.
