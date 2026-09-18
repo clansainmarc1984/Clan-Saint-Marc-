@@ -56,21 +56,19 @@ function showMessage(message, type = "error") {
 
 /* =========================================================
    4. VÉRIFICATION ADMIN
+   IMPORTANT :
+   La fonction Supabase is_admin() utilise auth.uid()
+   et ne reçoit PAS user_id.
    ========================================================= */
 
-async function checkAdmin(userId) {
-
-  if (!userId) {
-    return false;
-  }
+async function checkAdmin() {
 
   const {
     data,
     error
   } = await supabaseClient
-    .rpc("is_admin", {
-      user_id: userId
-    });
+    .rpc("is_admin");
+
 
   if (error) {
 
@@ -81,6 +79,7 @@ async function checkAdmin(userId) {
 
     return false;
   }
+
 
   return data === true;
 }
@@ -187,8 +186,10 @@ async function loginAdmin() {
     data.user;
 
 
+  /* IMPORTANT :
+     aucun user.id ici */
   const isAdmin =
-    await checkAdmin(user.id);
+    await checkAdmin();
 
 
   if (!isAdmin) {
@@ -207,9 +208,7 @@ async function loginAdmin() {
 
   showDashboard(user);
 
-  showMessage(
-    ""
-  );
+  showMessage("");
 
 
   await loadAllData();
@@ -254,6 +253,7 @@ function showTab(tabName) {
     document.querySelectorAll(
       ".admin-tab"
     );
+
 
   tabs.forEach(function(tab) {
 
@@ -350,7 +350,9 @@ async function loadNews() {
 
 
     item.innerHTML = `
-      <h3>${escapeHTML(news.title || "")}</h3>
+      <h3>
+        ${escapeHTML(news.title || "")}
+      </h3>
 
       <p>
         <strong>Date :</strong>
@@ -462,11 +464,9 @@ async function addNews() {
       .insert([
         {
           title: title,
-
           date: date,
 
-          /* IMPORTANT :
-             La colonne Supabase s'appelle content */
+          /* CORRECTION IMPORTANTE */
           content: text,
 
           image: image || null
@@ -1304,8 +1304,10 @@ document.addEventListener(
       session.user;
 
 
+    /* CORRECTION :
+       aucun user.id */
     const isAdmin =
-      await checkAdmin(user.id);
+      await checkAdmin();
 
 
     if (!isAdmin) {
@@ -1330,7 +1332,7 @@ document.addEventListener(
 
 
 /* =========================================================
-   20. RENDRE LES FONCTIONS ACCESSIBLES À admin.html
+   20. FONCTIONS ACCESSIBLES À admin.html
    ========================================================= */
 
 window.loginAdmin =
