@@ -301,7 +301,10 @@ async function loadNews() {
 
   if (error) {
 
-    console.error("Erreur chargement actualités :", error);
+    console.error(
+      "Erreur chargement actualités :",
+      error
+    );
 
     container.innerHTML =
       "<p>Impossible de charger les actualités.</p>";
@@ -333,21 +336,47 @@ async function loadNews() {
 }
 
 
+// =====================================================
+// 12. AJOUTER UNE ACTUALITÉ
+// =====================================================
+
 async function addNews() {
 
+  const titleElement =
+    document.getElementById("news-title");
+
+  const dateElement =
+    document.getElementById("news-date");
+
+  const textElement =
+    document.getElementById("news-text");
+
+  const imageElement =
+    document.getElementById("news-image");
+
+
   const title =
-    document.getElementById("news-title").value.trim();
+    titleElement
+      ? titleElement.value.trim()
+      : "";
 
   const date =
-    document.getElementById("news-date").value;
+    dateElement
+      ? dateElement.value
+      : "";
 
   const text =
-    document.getElementById("news-text").value.trim();
+    textElement
+      ? textElement.value.trim()
+      : "";
 
   const image =
-    document.getElementById("news-image").value.trim();
+    imageElement
+      ? imageElement.value.trim()
+      : "";
 
 
+  // Vérification des champs obligatoires
   if (!title || !date || !text) {
 
     alert(
@@ -358,43 +387,102 @@ async function addNews() {
   }
 
 
-  const {
-    error
-  } = await supabaseClient
-    .from("news")
-    .insert([{
+  console.log(
+    "Publication de l'actualité :",
+    {
       title: title,
       date: date,
       text: text,
-      image: image || null
-    }]);
+      image: image
+    }
+  );
 
 
-  if (error) {
+  try {
 
-    console.error(error);
+    const {
+      data,
+      error
+    } = await supabaseClient
+      .from("news")
+      .insert([{
+        title: title,
+        date: date,
+        text: text,
+        image: image || null
+      }])
+      .select();
 
-    alert(
-      "Erreur lors de la publication : " +
-      error.message
+
+    // Erreur Supabase
+    if (error) {
+
+      console.error(
+        "ERREUR SUPABASE NEWS :",
+        error
+      );
+
+      alert(
+        "Erreur Supabase :\n\n" +
+        error.message
+      );
+
+      return;
+    }
+
+
+    // Publication réussie
+    console.log(
+      "Publication réussie :",
+      data
     );
 
-    return;
+
+    // Vider le formulaire
+    if (titleElement) {
+      titleElement.value = "";
+    }
+
+    if (dateElement) {
+      dateElement.value = "";
+    }
+
+    if (textElement) {
+      textElement.value = "";
+    }
+
+    if (imageElement) {
+      imageElement.value = "";
+    }
+
+
+    alert(
+      "Actualité publiée avec succès !"
+    );
+
+
+    // Recharger la liste
+    await loadNews();
+
   }
 
+  catch (error) {
 
-  document.getElementById("news-title").value = "";
-  document.getElementById("news-date").value = "";
-  document.getElementById("news-text").value = "";
-  document.getElementById("news-image").value = "";
+    console.error(
+      "ERREUR RÉSEAU :",
+      error
+    );
 
-
-  await loadNews();
+    alert(
+      "Impossible de contacter Supabase.\n\n" +
+      error
+    );
+  }
 }
 
 
 // =====================================================
-// 12. ANNIVERSAIRES
+// 13. ANNIVERSAIRES
 // =====================================================
 
 async function loadBirthdays() {
@@ -507,7 +595,7 @@ async function addBirthday() {
 
 
 // =====================================================
-// 13. GALERIE
+// 14. GALERIE
 // =====================================================
 
 async function loadGallery() {
@@ -620,7 +708,7 @@ async function addGallery() {
 
 
 // =====================================================
-// 14. VIDÉOS
+// 15. VIDÉOS
 // =====================================================
 
 async function loadVideos() {
@@ -727,7 +815,7 @@ async function addVideo() {
 
 
 // =====================================================
-// 15. PROMOTIONS
+// 16. PROMOTIONS
 // =====================================================
 
 async function loadPromotions() {
@@ -840,7 +928,7 @@ async function addPromotion() {
 
 
 // =====================================================
-// 16. EXPORTATION DES DONNÉES
+// 17. EXPORTATION DES DONNÉES
 // =====================================================
 
 async function exportData() {
@@ -911,7 +999,7 @@ async function exportData() {
 
 
 // =====================================================
-// 17. PROTECTION CONTRE L'INJECTION HTML
+// 18. PROTECTION CONTRE L'INJECTION HTML
 // =====================================================
 
 function escapeHTML(value) {
@@ -926,7 +1014,7 @@ function escapeHTML(value) {
 
 
 // =====================================================
-// 18. INITIALISATION
+// 19. INITIALISATION
 // =====================================================
 
 document.addEventListener(
@@ -976,7 +1064,7 @@ document.addEventListener(
 
 
 // =====================================================
-// 19. RENDRE LES FONCTIONS ACCESSIBLES AUX BOUTONS HTML
+// 20. RENDRE LES FONCTIONS ACCESSIBLES AUX BOUTONS HTML
 // =====================================================
 
 window.loginAdmin = loginAdmin;
