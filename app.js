@@ -1,3 +1,9 @@
+// ======================================================
+// CLAN SAINT MARC — ADMINISTRATION
+// ======================================================
+
+const ADMIN_CODE = "SaintMarc1984";
+
 const emptyData = {
   news: [],
   birthdays: [],
@@ -10,74 +16,68 @@ let data = structuredClone(emptyData);
 let supabaseClient = null;
 
 const TABLES = Object.keys(emptyData);
-const ADMIN_CODE = "SaintMarc1984";
 
-/* ================================
-   CONFIGURATION SUPABASE
-================================ */
+
+// ======================================================
+// SUPABASE
+// ======================================================
 
 function configured() {
   return (
     window.SUPABASE_URL &&
     window.SUPABASE_ANON_KEY &&
     !window.SUPABASE_URL.includes("TON-PROJET") &&
-    !window.SUPABASE_ANON_KEY.includes("TON_ANON_KEY") &&
-    !window.SUPABASE_ANON_KEY.includes("TON_PUBLISHABLE_KEY")
+    !window.SUPABASE_ANON_KEY.includes("TON_ANON_KEY")
   );
 }
 
 function initDb() {
-  if (!configured()) {
-    console.error("Supabase n'est pas correctement configuré.");
-    return;
-  }
-
-  if (!window.supabase) {
-    console.error("La bibliothèque Supabase n'est pas chargée.");
-    return;
-  }
-
   try {
-    supabaseClient = window.supabase.createClient(
-      window.SUPABASE_URL,
-      window.SUPABASE_ANON_KEY
-    );
+    if (configured() && window.supabase) {
+      supabaseClient = window.supabase.createClient(
+        window.SUPABASE_URL,
+        window.SUPABASE_ANON_KEY
+      );
+      console.log("Supabase connecté.");
+      return true;
+    }
 
-    console.log("Supabase connecté avec succès.");
-  } catch (error) {
-    console.error(
-      "Erreur lors de l'initialisation de Supabase :",
-      error
-    );
+    console.error("Supabase non configuré.");
+    return false;
 
-    supabaseClient = null;
+  } catch (e) {
+    console.error("Erreur Supabase :", e);
+    return false;
   }
 }
 
-/* ================================
-   CHARGEMENT DES DONNÉES
-================================ */
+
+// ======================================================
+// CHARGEMENT DES DONNÉES
+// ======================================================
 
 async function loadData() {
+
   if (!supabaseClient) {
+    console.error("Client Supabase absent.");
     renderAll();
     return;
   }
 
   try {
+
     const results = await Promise.all(
+
       TABLES.map(async (table) => {
-        const {
-          data: rows,
-          error
-        } = await supabaseClient
-          .from(table)
-          .select("*")
-          .order("created_at", {
-            ascending: false
-          });
+
+        const { data: rows, error } =
+          await supabaseClient
+            .from(table)
+            .select("*")
+            .order("created_at", { ascending: false });
 
         if (error) {
+          console.error(`Erreur table ${table}:`, error);
           throw error;
         }
 
@@ -87,56 +87,50 @@ async function loadData() {
 
     data = Object.fromEntries(results);
 
+    console.log("Données chargées :", data);
+
     renderAll();
 
-    if (isAdmin()) {
-      renderAdmin();
-    }
-
-    console.log("Données Supabase chargées.");
   } catch (error) {
-    console.error(
-      "Erreur lors du chargement des données :",
-      error
-    );
+
+    console.error("Erreur de chargement :", error);
 
     renderAll();
 
-    const loginMsg =
-      document.getElementById("login-msg");
+    const msg = document.getElementById("login-msg");
 
-    if (loginMsg) {
-      loginMsg.textContent =
-        "Base de données non disponible : " +
-        error.message;
+    if (msg) {
+      msg.textContent =
+        "Erreur Supabase : " + error.message;
     }
   }
 }
 
-/* ================================
-   ADMINISTRATION
-================================ */
+
+// ======================================================
+// ADMINISTRATION PAR CODE
+// ======================================================
 
 function isAdmin() {
-  return (
-    sessionStorage.getItem(
-      "clanSaintMarcAdmin"
-    ) === "true"
-  );
+  return sessionStorage.getItem("clanSaintMarcAdmin") === "true";
 }
 
-function requireAuth() {
+
+async function requireAuth() {
+
   if (!supabaseClient) {
+
     alert(
-      "Supabase n'est pas disponible. Vérifie config.js."
+      "Supabase n'est pas configuré correctement."
     );
 
     return false;
   }
 
   if (!isAdmin()) {
+
     alert(
-      "Connecte-toi d'abord à l'administration."
+      "Accès administrateur requis."
     );
 
     return false;
@@ -145,25 +139,21 @@ function requireAuth() {
   return true;
 }
 
-/* ================================
-   CONNEXION ADMIN
-================================ */
 
 function loginAdmin() {
-  const passwordInput =
-    document.getElementById("admin-pass");
 
-  const message =
-    document.getElementById("login-msg");
+  const input = document.getElementById("admin-pass");
+  const message = document.getElementById("login-msg");
 
-  if (!passwordInput) {
+  if (!input) {
+    console.error("Champ admin-pass introuvable.");
     return;
   }
 
-  const password =
-    passwordInput.value.trim();
+  const password = input.value.trim();
 
   if (!password) {
+
     if (message) {
       message.textContent =
         "Entre le code administrateur.";
@@ -173,20 +163,27 @@ function loginAdmin() {
   }
 
   if (password !== ADMIN_CODE) {
+
     if (message) {
       message.textContent =
         "Code administrateur incorrect.";
     }
 
-    passwordInput.value = "";
+    input.value = "";
 
     return;
   }
 
+  // Connexion réussie
   sessionStorage.setItem(
     "clanSaintMarcAdmin",
     "true"
   );
+
+  if (message) {
+    message.textContent =
+      "Connexion réussie.";
+  }
 
   const loginBox =
     document.getElementById("login-box");
@@ -202,22 +199,16 @@ function loginAdmin() {
     dashboard.hidden = false;
   }
 
-  if (message) {
-    message.textContent = "";
-  }
+  input.value = "";
 
   renderAdmin();
 
-  console.log(
-    "Administrateur connecté."
-  );
+  console.log("Administrateur connecté.");
 }
 
-/* ================================
-   DÉCONNEXION
-================================ */
 
 function logoutAdmin() {
+
   sessionStorage.removeItem(
     "clanSaintMarcAdmin"
   );
@@ -244,11 +235,13 @@ function logoutAdmin() {
   }
 }
 
-/* ================================
-   MENU
-================================ */
+
+// ======================================================
+// MENU
+// ======================================================
 
 function toggleMenu() {
+
   const menu =
     document.getElementById("menu");
 
@@ -257,7 +250,9 @@ function toggleMenu() {
   }
 }
 
+
 function closeMenu() {
+
   const menu =
     document.getElementById("menu");
 
@@ -266,366 +261,392 @@ function closeMenu() {
   }
 }
 
-/* ================================
-   ONGLETS
-================================ */
+
+// ======================================================
+// ONGLETS ADMIN
+// ======================================================
 
 function showTab(name) {
+
   document
     .querySelectorAll(".tab-panel")
-    .forEach((panel) => {
+    .forEach(panel => {
       panel.hidden = true;
     });
 
   const selected =
-    document.getElementById(
-      "tab-" + name
-    );
+    document.getElementById("tab-" + name);
 
   if (selected) {
     selected.hidden = false;
   }
 }
 
-/* ================================
-   UTILITAIRE INPUT
-================================ */
+
+// ======================================================
+// UTILITAIRES
+// ======================================================
 
 function val(id) {
+
   const element =
     document.getElementById(id);
 
   if (!element) {
+    console.error(
+      "Élément introuvable : " + id
+    );
+
     return "";
   }
 
   return element.value.trim();
 }
 
-/* ================================
-   AJOUT DANS SUPABASE
-================================ */
+
+function clearFields(ids) {
+
+  ids.forEach(id => {
+
+    const element =
+      document.getElementById(id);
+
+    if (element) {
+      element.value = "";
+    }
+  });
+}
+
+
+// ======================================================
+// AJOUT DANS SUPABASE
+// ======================================================
 
 async function addRow(table, row) {
-  if (!requireAuth()) {
+
+  if (!(await requireAuth())) {
     return;
   }
 
   try {
-    const {
-      error
-    } = await supabaseClient
-      .from(table)
-      .insert(row);
+
+    const { error } =
+      await supabaseClient
+        .from(table)
+        .insert(row);
 
     if (error) {
-      throw error;
+
+      console.error(
+        `Erreur insertion ${table}:`,
+        error
+      );
+
+      alert(
+        "Erreur lors de l'ajout :\n\n" +
+        error.message
+      );
+
+      return;
     }
 
-    alert(
-      "Élément ajouté avec succès."
-    );
+    alert("Élément ajouté avec succès !");
 
     await loadData();
+
     renderAdmin();
 
   } catch (error) {
+
     console.error(error);
 
     alert(
-      "Erreur lors de l'enregistrement : " +
-      error.message
+      "Erreur : " + error.message
     );
   }
 }
 
-/* ================================
-   ACTUALITÉS
-================================ */
+
+// ======================================================
+// ACTUALITÉS
+// ======================================================
 
 async function addNews() {
-  if (
-    !val("news-title") ||
-    !val("news-text")
-  ) {
+
+  const title = val("news-title");
+  const date = val("news-date");
+  const text = val("news-text");
+  const image = val("news-image");
+
+  if (!title || !text) {
+
     alert(
-      "Ajoute un titre et un texte."
+      "Ajoute au minimum un titre et un texte."
     );
 
     return;
   }
 
   await addRow("news", {
-    title: val("news-title"),
-    date:
-      val("news-date") || null,
-    text: val("news-text"),
-    image:
-      val("news-image") || null
+    title: title,
+    date: date || null,
+    text: text,
+    image: image || null
   });
 
-  [
+  clearFields([
     "news-title",
     "news-date",
     "news-text",
     "news-image"
-  ].forEach((id) => {
-    const element =
-      document.getElementById(id);
-
-    if (element) {
-      element.value = "";
-    }
-  });
+  ]);
 }
 
-/* ================================
-   ANNIVERSAIRES
-================================ */
+
+// ======================================================
+// ANNIVERSAIRES
+// ======================================================
 
 async function addBirthday() {
-  if (
-    !val("bd-name") ||
-    !val("bd-date")
-  ) {
+
+  const name = val("bd-name");
+  const date = val("bd-date");
+  const promo = val("bd-promo");
+
+  if (!name || !date) {
+
     alert(
-      "Ajoute le nom et la date."
+      "Ajoute le nom et la date de naissance."
     );
 
     return;
   }
 
   await addRow("birthdays", {
-    name: val("bd-name"),
-    date: val("bd-date"),
-    promo:
-      val("bd-promo") || null
+    name: name,
+    date: date,
+    promo: promo || null
   });
 
-  [
+  clearFields([
     "bd-name",
     "bd-date",
     "bd-promo"
-  ].forEach((id) => {
-    const element =
-      document.getElementById(id);
-
-    if (element) {
-      element.value = "";
-    }
-  });
+  ]);
 }
 
-/* ================================
-   GALERIE
-================================ */
+
+// ======================================================
+// GALERIE
+// ======================================================
 
 async function addGallery() {
-  if (!val("gal-image")) {
+
+  const title = val("gal-title");
+  const image = val("gal-image");
+  const date = val("gal-date");
+
+  if (!image) {
+
     alert(
-      "Ajoute l'URL de l'image."
+      "Ajoute l'URL de la photo."
     );
 
     return;
   }
 
   await addRow("gallery", {
-    title:
-      val("gal-title") || null,
-    image: val("gal-image"),
-    date:
-      val("gal-date") || null
+    title: title || null,
+    image: image,
+    date: date || null
   });
 
-  [
+  clearFields([
     "gal-title",
     "gal-image",
     "gal-date"
-  ].forEach((id) => {
-    const element =
-      document.getElementById(id);
-
-    if (element) {
-      element.value = "";
-    }
-  });
+  ]);
 }
 
-/* ================================
-   VIDÉOS
-================================ */
+
+// ======================================================
+// VIDÉOS
+// ======================================================
 
 async function addVideo() {
-  if (
-    !val("vid-title") ||
-    !val("vid-url")
-  ) {
+
+  const title = val("vid-title");
+  const url = val("vid-url");
+
+  if (!title || !url) {
+
     alert(
-      "Ajoute le titre et le lien."
+      "Ajoute le titre et le lien de la vidéo."
     );
 
     return;
   }
 
   await addRow("videos", {
-    title: val("vid-title"),
-    url: val("vid-url")
+    title: title,
+    url: url
   });
 
-  [
+  clearFields([
     "vid-title",
     "vid-url"
-  ].forEach((id) => {
-    const element =
-      document.getElementById(id);
-
-    if (element) {
-      element.value = "";
-    }
-  });
+  ]);
 }
 
-/* ================================
-   PROMOTIONS
-================================ */
+
+// ======================================================
+// PROMOTIONS
+// ======================================================
 
 async function addPromotion() {
-  if (
-    !val("promo-number") ||
-    !val("promo-year")
-  ) {
+
+  const number = val("promo-number");
+  const year = val("promo-year");
+  const text = val("promo-text");
+
+  if (!number || !year) {
+
     alert(
-      "Ajoute le numéro et l'année."
+      "Ajoute le numéro de la promotion et l'année."
     );
 
     return;
   }
 
   await addRow("promotions", {
-    number: val("promo-number"),
-    year: val("promo-year"),
-    text:
-      val("promo-text") || null
+    number: number,
+    year: year,
+    text: text || null
   });
 
-  [
+  clearFields([
     "promo-number",
     "promo-year",
     "promo-text"
-  ].forEach((id) => {
-    const element =
-      document.getElementById(id);
-
-    if (element) {
-      element.value = "";
-    }
-  });
+  ]);
 }
 
-/* ================================
-   SUPPRESSION
-================================ */
+
+// ======================================================
+// SUPPRESSION
+// ======================================================
 
 async function del(type, id) {
+
   if (!isAdmin()) {
+
     alert(
-      "Connecte-toi d'abord à l'administration."
+      "Accès administrateur requis."
     );
 
     return;
   }
 
-  if (
-    !confirm(
-      "Supprimer cet élément ?"
-    )
-  ) {
-    return;
-  }
-
-  if (!supabaseClient) {
-    alert(
-      "Supabase n'est pas disponible."
-    );
-
+  if (!confirm("Supprimer cet élément ?")) {
     return;
   }
 
   try {
-    const {
-      error
-    } = await supabaseClient
-      .from(type)
-      .delete()
-      .eq("id", id);
+
+    const { error } =
+      await supabaseClient
+        .from(type)
+        .delete()
+        .eq("id", id);
 
     if (error) {
-      throw error;
+
+      console.error(
+        "Erreur suppression :",
+        error
+      );
+
+      alert(
+        "Erreur lors de la suppression :\n\n" +
+        error.message
+      );
+
+      return;
     }
 
+    alert("Élément supprimé.");
+
     await loadData();
+
     renderAdmin();
 
   } catch (error) {
+
     console.error(error);
 
     alert(
-      "Erreur lors de la suppression : " +
-      error.message
+      "Erreur : " + error.message
     );
   }
 }
 
-/* ================================
-   AFFICHAGE DES DONNÉES
-================================ */
+
+// ======================================================
+// AFFICHAGE DU SITE
+// ======================================================
 
 function renderAll() {
 
-  /* -------- ACTUALITÉS -------- */
+  // ---------------- ACTUALITÉS ----------------
 
   const news =
-    document.getElementById(
-      "news-list"
-    );
+    document.getElementById("news-list");
 
   if (news) {
+
     news.innerHTML =
       data.news.length
-        ? data.news
-            .map(
-              (x) => `
-                <article class="card">
 
-                  <p class="eyebrow">
-                    ${esc(x.date || "")}
-                  </p>
+        ? data.news.map(x => `
 
-                  <h3>
-                    ${esc(x.title)}
-                  </h3>
+          <article class="card">
 
-                  <p>
-                    ${esc(x.text)}
-                  </p>
+            <p class="eyebrow">
+              ${esc(x.date || "")}
+            </p>
 
-                  ${
-                    x.image
-                      ? `
-                        <img
-                          style="width:100%;border-radius:12px;margin-top:12px;max-height:260px;object-fit:cover"
-                          src="${escAttr(x.image)}"
-                          alt=""
-                        >
-                      `
-                      : ""
-                  }
+            <h3>
+              ${esc(x.title)}
+            </h3>
 
-                </article>
-              `
-            )
-            .join("")
+            <p>
+              ${esc(x.text)}
+            </p>
+
+            ${
+              x.image
+                ? `
+                  <img
+                    style="
+                      width:100%;
+                      border-radius:12px;
+                      margin-top:12px;
+                      max-height:260px;
+                      object-fit:cover;
+                    "
+                    src="${escAttr(x.image)}"
+                    alt=""
+                  >
+                `
+                : ""
+            }
+
+          </article>
+
+        `).join("")
+
         : `
+
           <div class="empty">
 
             <span>📰</span>
@@ -636,40 +657,39 @@ function renderAll() {
 
             <p>
               Ajoute ta première actualité
-              depuis l'espace
-              d'administration.
+              depuis l'espace d'administration.
             </p>
 
           </div>
+
         `;
   }
 
-  /* -------- ANNIVERSAIRES -------- */
 
-  const birthdayList =
-    document.getElementById(
-      "birthday-list"
-    );
+  // ---------------- ANNIVERSAIRES ----------------
 
-  if (birthdayList) {
-    birthdayList.innerHTML =
+  const bd =
+    document.getElementById("birthday-list");
+
+  if (bd) {
+
+    bd.innerHTML =
       data.birthdays.length
+
         ? data.birthdays
             .slice()
             .sort((a, b) =>
-              a.date.localeCompare(
-                b.date
-              )
+              a.date.localeCompare(b.date)
             )
-            .map((x) => {
+            .map(x => {
 
               const d =
                 new Date(
-                  x.date +
-                  "T12:00:00"
+                  x.date + "T12:00:00"
                 );
 
               return `
+
                 <article class="birthday">
 
                   <div class="date">
@@ -700,10 +720,13 @@ function renderAll() {
                   </div>
 
                 </article>
+
               `;
-            })
-            .join("")
+
+            }).join("")
+
         : `
+
           <div class="empty">
 
             <span>🎉</span>
@@ -713,54 +736,51 @@ function renderAll() {
             </h3>
 
             <p>
-              Ajoute les membres et
-              leurs dates depuis
-              l'administration.
+              Ajoute les membres et leurs dates
+              depuis l'administration.
             </p>
 
           </div>
+
         `;
   }
 
-  /* -------- GALERIE -------- */
 
-  const gallery =
-    document.getElementById(
-      "gallery-list"
-    );
+  // ---------------- GALERIE ----------------
 
-  if (gallery) {
-    gallery.innerHTML =
+  const gal =
+    document.getElementById("gallery-list");
+
+  if (gal) {
+
+    gal.innerHTML =
       data.gallery.length
-        ? data.gallery
-            .map(
-              (x) => `
-                <figure
-                  class="gallery-item"
-                >
 
-                  <img
-                    src="${escAttr(
-                      x.image
-                    )}"
-                    alt="${escAttr(
-                      x.title ||
-                      "Photo du Clan"
-                    )}"
-                  >
+        ? data.gallery.map(x => `
 
-                  <figcaption>
-                    ${esc(
-                      x.title ||
-                      "Moment du Clan"
-                    )}
-                  </figcaption>
+            <figure class="gallery-item">
 
-                </figure>
-              `
-            )
-            .join("")
+              <img
+                src="${escAttr(x.image)}"
+                alt="${escAttr(
+                  x.title ||
+                  "Photo du Clan"
+                )}"
+              >
+
+              <figcaption>
+                ${esc(
+                  x.title ||
+                  "Moment du Clan"
+                )}
+              </figcaption>
+
+            </figure>
+
+          `).join("")
+
         : `
+
           <div
             class="empty"
             style="grid-column:1/-1"
@@ -778,45 +798,43 @@ function renderAll() {
             </p>
 
           </div>
+
         `;
   }
 
-  /* -------- VIDÉOS -------- */
 
-  const videos =
-    document.getElementById(
-      "video-list"
-    );
+  // ---------------- VIDÉOS ----------------
 
-  if (videos) {
-    videos.innerHTML =
+  const vid =
+    document.getElementById("video-list");
+
+  if (vid) {
+
+    vid.innerHTML =
       data.videos.length
-        ? data.videos
-            .map(
-              (x) => `
-                <article
-                  class="video-card"
-                >
 
-                  <h3>
-                    ${esc(x.title)}
-                  </h3>
+        ? data.videos.map(x => `
 
-                  <a
-                    href="${escAttr(
-                      x.url
-                    )}"
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    Voir la vidéo ↗
-                  </a>
+            <article class="video-card">
 
-                </article>
-              `
-            )
-            .join("")
+              <h3>
+                ${esc(x.title)}
+              </h3>
+
+              <a
+                href="${escAttr(x.url)}"
+                target="_blank"
+                rel="noopener"
+              >
+                Voir la vidéo ↗
+              </a>
+
+            </article>
+
+          `).join("")
+
         : `
+
           <div class="empty">
 
             <span>🎥</span>
@@ -831,77 +849,89 @@ function renderAll() {
             </p>
 
           </div>
+
         `;
   }
 }
 
-/* ================================
-   AFFICHAGE DU TABLEAU DE BORD
-================================ */
+
+// ======================================================
+// AFFICHAGE ADMIN
+// ======================================================
 
 function renderAdmin() {
 
   const maps = {
+
     news: "title",
+
     birthdays: "name",
+
     gallery: "title",
+
     videos: "title",
+
     promotions: "number"
+
   };
 
-  Object.keys(maps).forEach(
-    (type) => {
 
-      const element =
-        document.getElementById(
-          "admin-" + type
-        );
+  Object.keys(maps).forEach(type => {
 
-      if (!element) {
-        return;
-      }
+    const element =
+      document.getElementById(
+        "admin-" + type
+      );
 
-      element.innerHTML =
-        data[type].length
-          ? data[type]
-              .map(
-                (x) => `
-                  <div
-                    class="admin-item"
-                  >
-
-                    <span>
-                      ${esc(
-                        x[maps[type]] ||
-                        "Sans titre"
-                      )}
-                    </span>
-
-                    <button
-                      onclick="del(
-                        '${type}',
-                        '${x.id}'
-                      )"
-                    >
-                      Supprimer
-                    </button>
-
-                  </div>
-                `
-              )
-              .join("")
-          : `
-              <p class="hint">
-                Aucun élément.
-              </p>
-            `;
+    if (!element) {
+      return;
     }
-  );
+
+
+    element.innerHTML =
+
+      data[type].length
+
+        ? data[type].map(x => `
+
+            <div class="admin-item">
+
+              <span>
+
+                ${esc(
+                  x[maps[type]] ||
+                  "Sans titre"
+                )}
+
+              </span>
+
+              <button
+                onclick="del(
+                  '${type}',
+                  '${x.id}'
+                )"
+              >
+                Supprimer
+              </button>
+
+            </div>
+
+          `).join("")
+
+        : `
+
+            <p class="hint">
+              Aucun élément.
+            </p>
+
+          `;
+  });
 }
 
-/* ================================
-   EXPORTATION
-================================ */
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 function exportData() {
 
@@ -921,14 +951,10 @@ function exportData() {
     );
 
   const url =
-    URL.createObjectURL(
-      blob
-    );
+    URL.createObjectURL(blob);
 
   const a =
-    document.createElement(
-      "a"
-    );
+    document.createElement("a");
 
   a.href = url;
 
@@ -944,73 +970,84 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-/* ================================
-   IMPORTATION
-================================ */
+
+// ======================================================
+// IMPORT / RESET
+// ======================================================
 
 function importData() {
 
   alert(
-    "L'import JSON est désactivé " +
-    "pour éviter d'écraser " +
-    "accidentellement la base en ligne. " +
-    "Ajoute les contenus depuis " +
-    "le tableau de bord."
+    "L'import JSON est désactivé pour éviter d'écraser accidentellement la base en ligne."
   );
 }
 
-/* ================================
-   RÉINITIALISATION
-================================ */
 
 function resetData() {
 
   alert(
-    "La suppression globale n'est " +
-    "pas activée depuis le site. " +
-    "Supprime les éléments un par un " +
-    "depuis le tableau de bord."
+    "La suppression globale n'est pas activée. Supprime les éléments un par un."
   );
 }
 
-/* ================================
-   PROTECTION DU HTML
-================================ */
+
+// ======================================================
+// SÉCURISATION AFFICHAGE
+// ======================================================
 
 function esc(s = "") {
 
   return String(s).replace(
     /[&<>"']/g,
-    (m) => ({
+    m => ({
       "&": "&amp;",
       "<": "&lt;",
       ">": "&gt;",
       '"': "&quot;",
       "'": "&#039;"
-    })[m]
+    }[m])
   );
 }
 
+
 function escAttr(s = "") {
+
   return esc(s);
 }
 
-/* ================================
-   INITIALISATION
-================================ */
 
-initDb();
-
-loadData();
-
-/* ================================
-   RESTAURATION DE LA SESSION ADMIN
-================================ */
+// ======================================================
+// DÉMARRAGE
+// ======================================================
 
 document.addEventListener(
   "DOMContentLoaded",
-  () => {
+  async () => {
 
+    console.log(
+      "Clan Saint Marc : démarrage..."
+    );
+
+    const ok = initDb();
+
+    if (!ok) {
+
+      const msg =
+        document.getElementById(
+          "login-msg"
+        );
+
+      if (msg) {
+
+        msg.textContent =
+          "Supabase n'est pas correctement configuré.";
+      }
+
+      return;
+    }
+
+
+    // Si déjà connecté dans ce navigateur
     if (isAdmin()) {
 
       const loginBox =
@@ -1030,8 +1067,13 @@ document.addEventListener(
       if (dashboard) {
         dashboard.hidden = false;
       }
-
-      renderAdmin();
     }
+
+
+    await loadData();
+
+    renderAdmin();
+
   }
 );
+ 
