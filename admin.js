@@ -1,334 +1,648 @@
-
-      /* =========================================================
+/* =========================================================
    CLAN SAINT MARC
-   ADMIN.JS — VERSION CORRIGÉE
+   ADMIN.JS — VERSION ROBUSTE
    ========================================================= */
+
+"use strict";
 
 /* =========================================================
-   1. VÉRIFICATION DE LA CONFIGURATION
+   1. ÉTAT GLOBAL
    ========================================================= */
 
-if (
-  typeof window.SUPABASE_URL === "undefined" ||
-  typeof window.SUPABASE_ANON_KEY === "undefined"
-) {
-  console.error("Configuration Supabase introuvable.");
-  alert(
-    "Erreur : la configuration Supabase n'est pas chargée."
-  );
+let supabaseClient = null;
+let currentUser = null;
+
+
+/* =========================================================
+   2. UTILITAIRES
+   ========================================================= */
+
+function $(id) {
+  return document.getElementById(id);
 }
 
-/* =========================================================
-   2. CONNEXION SUPABASE
-   ========================================================= */
 
-const supabaseClient = window.supabase.createClient(
-  window.SUPABASE_URL,
-  window.SUPABASE_ANON_KEY
-);
+function setMessage(message, type = "error") {
 
-/* =========================================================
-   3. ÉLÉMENTS HTML
-   ========================================================= */
+  const box = $("login-msg");
 
-const loginBox = document.getElementById("login-box");
-const dashboard = document.getElementById("dashboard");
+  if (!box) return;
 
-const adminEmail = document.getElementById("admin-email");
-const adminPassword = document.getElementById("admin-password");
-
-const loginMsg = document.getElementById("login-msg");
-const adminUser = document.getElementById("admin-user");
-
-/* =========================================================
-   4. MESSAGE DE CONNEXION
-   ========================================================= */
-
-function showMessage(message, type = "error") {
-  if (!loginMsg) return;
-
-  loginMsg.textContent = message;
+  box.textContent = message;
 
   if (type === "success") {
-    loginMsg.style.color = "green";
+    box.style.color = "green";
+  } else if (type === "info") {
+    box.style.color = "#555";
   } else {
-    loginMsg.style.color = "red";
+    box.style.color = "#c9151e";
   }
 }
 
-/* =========================================================
-   5. AFFICHER LE DASHBOARD
-   ========================================================= */
 
-function showDashboard(user) {
+function setButtonLoading(button, loading, normalText) {
 
-  if (loginBox) {
-    loginBox.hidden = true;
-    loginBox.style.display = "none";
-  }
+  if (!button) return;
 
-  if (dashboard) {
+  button.disabled = loading;
 
-    /* IMPORTANT :
-       on retire réellement l'attribut hidden */
-    dashboard.hidden = false;
-
-    dashboard.style.display = "block";
-  }
-
-  if (adminUser && user) {
-    adminUser.textContent = user.email || "";
-  }
-
-  /* Afficher automatiquement Actualités */
-  showTab("news");
+  button.textContent =
+    loading
+      ? "Connexion..."
+      : normalText;
 }
 
-/* =========================================================
-   6. AFFICHER LA CONNEXION
-   ========================================================= */
 
-function showLogin() {
+function escapeHTML(value) {
 
-  if (loginBox) {
-    loginBox.hidden = false;
-    loginBox.style.display = "block";
-  }
-
-  if (dashboard) {
-    dashboard.hidden = true;
-    dashboard.style.display = "none";
-  }
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
+
 /* =========================================================
-   7. VÉRIFIER SI L'UTILISATEUR EST ADMIN
+   3. INITIALISATION SUPABASE
    ========================================================= */
 
-async function checkAdmin() {
+function initializeSupabase() {
 
   try {
 
-    const {
-      data,
-      error
-    } = await supabaseClient.rpc("is_admin");
+    if (
+      typeof window.supabase === "undefined"
+    ) {
 
-    console.log("=== VÉRIFICATION ADMIN ===");
-    console.log("Résultat :", data);
-    console.log("Erreur :", error);
-
-    if (error) {
-
-      console.error(
-        "Erreur RPC is_admin :",
-        error
+      throw new Error(
+        "La bibliothèque Supabase n'est pas chargée."
       );
 
-      return false;
     }
 
-    return data === true;
+
+    if (
+      !window.SUPABASE_URL ||
+      !window.SUPABASE_ANON_KEY
+    ) {
+
+      throw new Error(
+        "La configuration Supabase est absente."
+      );
+
+    }
+
+
+    supabaseClient =
+      window.supabase.createClient(
+        window.SUPABASE_URL,
+        window.SUPABASE_ANON_KEY
+      );
+
+
+    console.log(
+      "✓ Supabase initialisé."
+    );
+
+    return true;
 
   } catch (error) {
 
     console.error(
-      "Erreur vérification admin :",
+      "Erreur initialisation Supabase :",
       error
+    );
+
+    setMessage(
+      "Erreur de configuration : " +
+      error.message
     );
 
     return false;
   }
 }
 
+
 /* =========================================================
-   8. CONNEXION ADMINISTRATEUR
+   4. AFFICHAGE CONNEXION
    ========================================================= */
 
-async function loginAdmin() {
+function showLogin() {
 
-  const email =
-    adminEmail
-      ? adminEmail.value.trim()
-      : "";
+  const loginBox = $("login-box");
+  const dashboard = $("dashboard");
 
-  const password =
-    adminPassword
-      ? adminPassword.value
-      : "";
+  if (loginBox) {
 
-  if (!email || !password) {
+    loginBox.hidden = false;
+    loginBox.style.display = "block";
 
-    showMessage(
-      "Veuillez remplir tous les champs."
-    );
-
-    return;
   }
 
-  showMessage(
-    "Connexion en cours...",
-    "success"
-  );
+
+  if (dashboard) {
+
+    dashboard.hidden = true;
+    dashboard.style.display = "none";
+
+  }
+
+}
+
+
+/* =========================================================
+   5. AFFICHAGE TABLEAU DE BORD
+   ========================================================= */
+
+function showDashboard(user) {
+
+  const loginBox = $("login-box");
+  const dashboard = $("dashboard");
+
+  if (loginBox) {
+
+    loginBox.hidden = true;
+    loginBox.style.display = "none";
+
+  }
+
+
+  if (dashboard) {
+
+    /*
+      IMPORTANT :
+      on retire réellement l'attribut hidden.
+    */
+
+    dashboard.hidden = false;
+    dashboard.removeAttribute("hidden");
+    dashboard.style.display = "block";
+
+  }
+
+
+  const userBox = $("admin-user");
+
+  if (userBox && user) {
+
+    userBox.textContent =
+      user.email || "";
+
+  }
+
+
+  showTab("news");
+}
+
+
+/* =========================================================
+   6. VÉRIFICATION ADMIN
+   ========================================================= */
+
+async function checkAdmin() {
+
+  if (!supabaseClient) {
+
+    return {
+      ok: false,
+      message:
+        "Supabase n'est pas initialisé."
+    };
+
+  }
+
 
   try {
 
     const {
       data,
       error
-    } = await supabaseClient.auth.signInWithPassword({
-      email: email,
-      password: password
-    });
+    } = await supabaseClient
+      .rpc("is_admin");
+
+
+    console.log(
+      "RPC is_admin :",
+      data,
+      error
+    );
+
 
     if (error) {
 
-      console.error(
-        "Erreur de connexion :",
-        error
-      );
+      return {
+        ok: false,
+        message:
+          "Erreur de vérification administrateur : " +
+          error.message
+      };
 
-      showMessage(
-        "Connexion impossible : " +
-        error.message
-      );
-
-      return;
     }
 
-    const user = data.user;
 
-    if (!user) {
+    if (data !== true) {
 
-      showMessage(
-        "Utilisateur introuvable."
-      );
+      return {
+        ok: false,
+        message:
+          "Ce compte n'a pas les droits administrateur."
+      };
 
-      return;
     }
 
-    /* Vérification admin */
-    const isAdmin = await checkAdmin();
 
-    if (!isAdmin) {
+    return {
+      ok: true
+    };
 
-      await supabaseClient.auth.signOut();
-
-      showMessage(
-        "Accès refusé : ce compte n'est pas administrateur."
-      );
-
-      return;
-    }
-
-    /* Connexion réussie */
-    showDashboard(user);
-
-    showMessage("");
-
-    await loadAllData();
 
   } catch (error) {
 
     console.error(
-      "Erreur inattendue :",
+      "Erreur checkAdmin :",
       error
     );
 
-    showMessage(
-      "Une erreur est survenue pendant la connexion."
-    );
+    return {
+      ok: false,
+      message:
+        "Impossible de vérifier les droits administrateur : " +
+        error.message
+    };
+
   }
 }
 
+
 /* =========================================================
-   9. DÉCONNEXION
+   7. CONNEXION
+   ========================================================= */
+
+async function loginAdmin() {
+
+  console.log(
+    "=== BOUTON CONNEXION CLIQUÉ ==="
+  );
+
+
+  const emailInput =
+    $("admin-email");
+
+  const passwordInput =
+    $("admin-password");
+
+  const loginButton =
+    $("login-button");
+
+
+  if (!emailInput || !passwordInput) {
+
+    setMessage(
+      "Erreur : les champs de connexion sont introuvables."
+    );
+
+    return;
+
+  }
+
+
+  const email =
+    emailInput.value.trim();
+
+  const password =
+    passwordInput.value;
+
+
+  if (!email || !password) {
+
+    setMessage(
+      "Veuillez entrer votre adresse e-mail et votre mot de passe."
+    );
+
+    return;
+
+  }
+
+
+  if (!supabaseClient) {
+
+    setMessage(
+      "Supabase n'est pas correctement chargé. Actualise la page."
+    );
+
+    return;
+
+  }
+
+
+  setButtonLoading(
+    loginButton,
+    true,
+    "Se connecter"
+  );
+
+
+  setMessage(
+    "Connexion en cours...",
+    "info"
+  );
+
+
+  try {
+
+    /*
+      ÉTAPE 1 :
+      connexion Supabase
+    */
+
+    const {
+      data,
+      error
+    } = await supabaseClient
+      .auth
+      .signInWithPassword({
+        email,
+        password
+      });
+
+
+    if (error) {
+
+      console.error(
+        "Erreur signInWithPassword :",
+        error
+      );
+
+      setMessage(
+        "Connexion refusée : " +
+        error.message
+      );
+
+      return;
+
+    }
+
+
+    if (!data || !data.user) {
+
+      setMessage(
+        "Supabase n'a pas retourné d'utilisateur."
+      );
+
+      return;
+
+    }
+
+
+    currentUser =
+      data.user;
+
+
+    console.log(
+      "✓ Utilisateur connecté :",
+      currentUser.email
+    );
+
+
+    /*
+      ÉTAPE 2 :
+      vérification administrateur
+    */
+
+    setMessage(
+      "Vérification des droits administrateur...",
+      "info"
+    );
+
+
+    const adminResult =
+      await checkAdmin();
+
+
+    if (!adminResult.ok) {
+
+      await supabaseClient
+        .auth
+        .signOut();
+
+
+      currentUser = null;
+
+
+      setMessage(
+        adminResult.message
+      );
+
+      return;
+
+    }
+
+
+    /*
+      ÉTAPE 3 :
+      affichage du tableau de bord
+    */
+
+    showDashboard(
+      currentUser
+    );
+
+
+    setMessage(
+      "Connexion réussie.",
+      "success"
+    );
+
+
+    /*
+      ÉTAPE 4 :
+      chargement des données.
+      
+      Une erreur de table ne doit PAS
+      faire disparaître le dashboard.
+    */
+
+    await loadAllData();
+
+
+  } catch (error) {
+
+    console.error(
+      "ERREUR GÉNÉRALE DE CONNEXION :",
+      error
+    );
+
+    setMessage(
+      "Erreur : " +
+      (error.message || error)
+    );
+
+  } finally {
+
+    setButtonLoading(
+      loginButton,
+      false,
+      "Se connecter"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   8. DÉCONNEXION
    ========================================================= */
 
 async function logoutAdmin() {
 
   try {
 
-    const {
-      error
-    } = await supabaseClient.auth.signOut();
+    if (supabaseClient) {
 
-    if (error) {
+      await supabaseClient
+        .auth
+        .signOut();
 
-      console.error(
-        "Erreur déconnexion :",
-        error
-      );
-
-      alert(
-        "Erreur lors de la déconnexion : " +
-        error.message
-      );
-
-      return;
     }
-
-    showLogin();
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "Erreur déconnexion :",
+      error
+    );
 
-    showLogin();
   }
+
+
+  currentUser = null;
+
+  showLogin();
+
+  setMessage(
+    "Vous êtes déconnecté.",
+    "info"
+  );
+
 }
 
+
 /* =========================================================
-   10. ONGLET
+   9. ONGLETS
    ========================================================= */
 
 function showTab(tabName) {
 
-  const tabs =
-    document.querySelectorAll(".tab-panel");
+  console.log(
+    "Ouverture onglet :",
+    tabName
+  );
 
-  tabs.forEach(function(tab) {
 
-    tab.hidden = true;
-    tab.style.display = "none";
+  /*
+    Ton HTML utilise .tab-panel.
+  */
+
+  const panels =
+    document.querySelectorAll(
+      ".tab-panel"
+    );
+
+
+  panels.forEach(function(panel) {
+
+    panel.hidden = true;
+    panel.style.display = "none";
 
   });
 
-  const selectedTab =
-    document.getElementById(tabName);
 
-  if (selectedTab) {
+  const selected =
+    $(tabName);
 
-    selectedTab.hidden = false;
-    selectedTab.style.display = "block";
+
+  if (!selected) {
+
+    console.error(
+      "Onglet introuvable :",
+      tabName
+    );
+
+    return;
 
   }
+
+
+  selected.hidden = false;
+  selected.removeAttribute("hidden");
+  selected.style.display = "block";
+
 }
 
+
 /* =========================================================
-   11. CHARGER TOUTES LES DONNÉES
+   10. CHARGEMENT GLOBAL
    ========================================================= */
 
 async function loadAllData() {
 
-  await loadNews();
-  await loadBirthdays();
-  await loadGallery();
-  await loadVideos();
-  await loadPromotions();
+  /*
+    Chaque chargement est indépendant.
+    Une erreur sur une table ne bloque pas
+    les autres.
+  */
+
+  try {
+    await loadNews();
+  } catch (e) {
+    console.error("News :", e);
+  }
+
+
+  try {
+    await loadBirthdays();
+  } catch (e) {
+    console.error("Birthdays :", e);
+  }
+
+
+  try {
+    await loadGallery();
+  } catch (e) {
+    console.error("Gallery :", e);
+  }
+
+
+  try {
+    await loadVideos();
+  } catch (e) {
+    console.error("Videos :", e);
+  }
+
+
+  try {
+    await loadPromotions();
+  } catch (e) {
+    console.error("Promotions :", e);
+  }
 
 }
 
+
 /* =========================================================
-   12. ACTUALITÉS
+   11. ACTUALITÉS
    ========================================================= */
 
 async function loadNews() {
 
   const container =
-    document.getElementById("news-list");
+    $("news-list");
 
   if (!container) return;
+
 
   const {
     data,
@@ -336,39 +650,53 @@ async function loadNews() {
   } = await supabaseClient
     .from("news")
     .select("*")
-    .order("date", {
-      ascending: false
-    });
+    .order(
+      "date",
+      {
+        ascending: false
+      }
+    );
+
 
   if (error) {
 
     console.error(
-      "Erreur chargement actualités :",
+      "Erreur news :",
       error
     );
 
+    container.innerHTML =
+      "<p>Impossible de charger les actualités.</p>";
+
     return;
+
   }
 
+
   container.innerHTML = "";
+
 
   (data || []).forEach(function(news) {
 
     const item =
       document.createElement("div");
 
-    item.className = "admin-item";
+    item.className =
+      "admin-item";
+
 
     item.innerHTML = `
-      <h3>${escapeHTML(news.title || "")}</h3>
+      <h3>
+        ${escapeHTML(news.title)}
+      </h3>
 
       <p>
         <strong>Date :</strong>
-        ${escapeHTML(news.date || "")}
+        ${escapeHTML(news.date)}
       </p>
 
       <p>
-        ${escapeHTML(news.content || "")}
+        ${escapeHTML(news.content)}
       </p>
 
       ${
@@ -383,48 +711,32 @@ async function loadNews() {
       }
     `;
 
+
     container.appendChild(item);
 
   });
+
 }
 
+
 /* =========================================================
-   13. AJOUTER UNE ACTUALITÉ
+   12. AJOUT ACTUALITÉ
    ========================================================= */
 
 async function addNews() {
 
-  const titleElement =
-    document.getElementById("news-title");
-
-  const dateElement =
-    document.getElementById("news-date");
-
-  const textElement =
-    document.getElementById("news-text");
-
-  const imageElement =
-    document.getElementById("news-image");
-
   const title =
-    titleElement
-      ? titleElement.value.trim()
-      : "";
+    $("news-title")?.value.trim() || "";
 
   const date =
-    dateElement
-      ? dateElement.value
-      : "";
+    $("news-date")?.value || "";
 
   const content =
-    textElement
-      ? textElement.value.trim()
-      : "";
+    $("news-text")?.value.trim() || "";
 
   const image =
-    imageElement
-      ? imageElement.value.trim()
-      : "";
+    $("news-image")?.value.trim() || "";
+
 
   if (!title || !date || !content) {
 
@@ -433,7 +745,9 @@ async function addNews() {
     );
 
     return;
+
   }
+
 
   try {
 
@@ -441,68 +755,63 @@ async function addNews() {
       error
     } = await supabaseClient
       .from("news")
-      .insert([
-        {
-          title: title,
-          date: date,
-          content: content,
-          image: image || null
-        }
-      ]);
+      .insert({
+        title,
+        date,
+        content,
+        image: image || null
+      });
+
 
     if (error) {
 
-      console.error(
-        "Erreur publication actualité :",
-        error
-      );
+      throw error;
 
-      alert(
-        "Erreur Supabase :\n\n" +
-        error.message
-      );
-
-      return;
     }
 
-    if (titleElement)
-      titleElement.value = "";
 
-    if (dateElement)
-      dateElement.value = "";
+    $("news-title").value = "";
+    $("news-date").value = "";
+    $("news-text").value = "";
+    $("news-image").value = "";
 
-    if (textElement)
-      textElement.value = "";
-
-    if (imageElement)
-      imageElement.value = "";
 
     alert(
       "Actualité publiée avec succès !"
     );
 
+
     await loadNews();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "Erreur publication :",
+      error
+    );
 
     alert(
-      "Impossible de contacter Supabase."
+      "Impossible de publier l'actualité :\n\n" +
+      error.message
     );
+
   }
+
 }
 
+
 /* =========================================================
-   14. ANNIVERSAIRES
+   13. ANNIVERSAIRES
    ========================================================= */
 
 async function loadBirthdays() {
 
   const container =
-    document.getElementById("birthdays-list");
+    $("birthdays-list");
 
   if (!container) return;
+
 
   const {
     data,
@@ -510,78 +819,74 @@ async function loadBirthdays() {
   } = await supabaseClient
     .from("birthdays")
     .select("*")
-    .order("date", {
-      ascending: true
-    });
+    .order(
+      "date",
+      {
+        ascending: true
+      }
+    );
+
 
   if (error) {
 
     console.error(
-      "Erreur chargement anniversaires :",
+      "Erreur anniversaires :",
       error
     );
 
     return;
+
   }
+
 
   container.innerHTML = "";
 
-  (data || []).forEach(function(birthday) {
+
+  (data || []).forEach(function(row) {
 
     const item =
       document.createElement("div");
 
-    item.className = "admin-item";
+    item.className =
+      "admin-item";
+
 
     item.innerHTML = `
       <h3>
-        ${escapeHTML(birthday.name || "")}
+        ${escapeHTML(row.name)}
       </h3>
 
       <p>
         <strong>Date :</strong>
-        ${escapeHTML(birthday.date || "")}
+        ${escapeHTML(row.date)}
       </p>
 
       ${
-        birthday.promo
-          ? `
-            <p>
-              <strong>Promotion :</strong>
-              ${escapeHTML(birthday.promo)}
-            </p>
-          `
+        row.promo
+          ? `<p><strong>Promotion :</strong> ${escapeHTML(row.promo)}</p>`
           : ""
       }
     `;
 
+
     container.appendChild(item);
 
   });
+
 }
 
-/* =========================================================
-   15. AJOUTER UN ANNIVERSAIRE
-   ========================================================= */
 
 async function addBirthday() {
 
   const name =
-    document
-      .getElementById("birthday-name")
-      ?.value
-      .trim() || "";
+    $("birthday-name")?.value.trim() || "";
 
   const date =
-    document
-      .getElementById("birthday-date")
-      ?.value || "";
+    $("birthday-date")?.value || "";
 
   const promo =
-    document
-      .getElementById("birthday-promo")
-      ?.value
-      .trim() || "";
+    $("birthday-promo")?.value.trim() || "";
+
 
   if (!name || !date) {
 
@@ -590,61 +895,64 @@ async function addBirthday() {
     );
 
     return;
+
   }
 
-  const {
-    error
-  } = await supabaseClient
-    .from("birthdays")
-    .insert([
-      {
-        name: name,
-        date: date,
-        promo: promo || null
-      }
-    ]);
 
-  if (error) {
+  try {
+
+    const {
+      error
+    } = await supabaseClient
+      .from("birthdays")
+      .insert({
+        name,
+        date,
+        promo: promo || null
+      });
+
+
+    if (error) throw error;
+
+
+    $("birthday-name").value = "";
+    $("birthday-date").value = "";
+    $("birthday-promo").value = "";
+
+
+    alert(
+      "Anniversaire ajouté avec succès !"
+    );
+
+
+    await loadBirthdays();
+
+
+  } catch (error) {
 
     console.error(error);
 
     alert(
-      "Erreur lors de l'ajout : " +
+      "Erreur :\n\n" +
       error.message
     );
 
-    return;
   }
 
-  document.getElementById(
-    "birthday-name"
-  ).value = "";
-
-  document.getElementById(
-    "birthday-date"
-  ).value = "";
-
-  document.getElementById(
-    "birthday-promo"
-  ).value = "";
-
-  alert(
-    "Anniversaire ajouté avec succès !"
-  );
-
-  await loadBirthdays();
 }
 
+
 /* =========================================================
-   16. GALERIE
+   14. GALERIE
    ========================================================= */
 
 async function loadGallery() {
 
   const container =
-    document.getElementById("gallery-list");
+    $("gallery-list");
 
   if (!container) return;
+
 
   const {
     data,
@@ -652,77 +960,72 @@ async function loadGallery() {
   } = await supabaseClient
     .from("gallery")
     .select("*")
-    .order("date", {
-      ascending: false
-    });
+    .order(
+      "date",
+      {
+        ascending: false
+      }
+    );
+
 
   if (error) {
 
     console.error(
-      "Erreur chargement galerie :",
+      "Erreur galerie :",
       error
     );
 
     return;
+
   }
+
 
   container.innerHTML = "";
 
-  (data || []).forEach(function(photo) {
+
+  (data || []).forEach(function(row) {
 
     const item =
       document.createElement("div");
 
-    item.className = "admin-item";
+    item.className =
+      "admin-item";
+
 
     item.innerHTML = `
       <h3>
-        ${escapeHTML(photo.title || "")}
+        ${escapeHTML(row.title)}
       </h3>
 
       <p>
         <strong>Date :</strong>
-        ${escapeHTML(photo.date || "")}
+        ${escapeHTML(row.date)}
       </p>
 
-      ${
-        photo.image
-          ? `
-            <p>
-              ${escapeHTML(photo.image)}
-            </p>
-          `
-          : ""
-      }
+      <p>
+        ${escapeHTML(row.image)}
+      </p>
     `;
+
 
     container.appendChild(item);
 
   });
+
 }
 
-/* =========================================================
-   17. AJOUTER UNE PHOTO
-   ========================================================= */
 
 async function addGallery() {
 
   const title =
-    document
-      .getElementById("gallery-title")
-      ?.value
-      .trim() || "";
+    $("gallery-title")?.value.trim() || "";
 
   const image =
-    document
-      .getElementById("gallery-image")
-      ?.value
-      .trim() || "";
+    $("gallery-image")?.value.trim() || "";
 
   const date =
-    document
-      .getElementById("gallery-date")
-      ?.value || "";
+    $("gallery-date")?.value || "";
+
 
   if (!title || !image) {
 
@@ -731,61 +1034,64 @@ async function addGallery() {
     );
 
     return;
+
   }
 
-  const {
-    error
-  } = await supabaseClient
-    .from("gallery")
-    .insert([
-      {
-        title: title,
-        image: image,
-        date: date || null
-      }
-    ]);
 
-  if (error) {
+  try {
+
+    const {
+      error
+    } = await supabaseClient
+      .from("gallery")
+      .insert({
+        title,
+        image,
+        date: date || null
+      });
+
+
+    if (error) throw error;
+
+
+    $("gallery-title").value = "";
+    $("gallery-image").value = "";
+    $("gallery-date").value = "";
+
+
+    alert(
+      "Photo ajoutée avec succès !"
+    );
+
+
+    await loadGallery();
+
+
+  } catch (error) {
 
     console.error(error);
 
     alert(
-      "Erreur lors de l'ajout : " +
+      "Erreur :\n\n" +
       error.message
     );
 
-    return;
   }
 
-  document.getElementById(
-    "gallery-title"
-  ).value = "";
-
-  document.getElementById(
-    "gallery-image"
-  ).value = "";
-
-  document.getElementById(
-    "gallery-date"
-  ).value = "";
-
-  alert(
-    "Photo ajoutée avec succès !"
-  );
-
-  await loadGallery();
 }
 
+
 /* =========================================================
-   18. VIDÉOS
+   15. VIDÉOS
    ========================================================= */
 
 async function loadVideos() {
 
   const container =
-    document.getElementById("videos-list");
+    $("videos-list");
 
   if (!container) return;
+
 
   const {
     data,
@@ -794,117 +1100,121 @@ async function loadVideos() {
     .from("videos")
     .select("*");
 
+
   if (error) {
 
     console.error(
-      "Erreur chargement vidéos :",
+      "Erreur vidéos :",
       error
     );
 
     return;
+
   }
+
 
   container.innerHTML = "";
 
-  (data || []).forEach(function(video) {
+
+  (data || []).forEach(function(row) {
 
     const item =
       document.createElement("div");
 
-    item.className = "admin-item";
+    item.className =
+      "admin-item";
+
 
     item.innerHTML = `
       <h3>
-        ${escapeHTML(video.title || "")}
+        ${escapeHTML(row.title)}
       </h3>
 
       <p>
-        ${escapeHTML(video.url || "")}
+        ${escapeHTML(row.url)}
       </p>
     `;
+
 
     container.appendChild(item);
 
   });
+
 }
 
-/* =========================================================
-   19. AJOUTER UNE VIDÉO
-   ========================================================= */
 
 async function addVideo() {
 
   const title =
-    document
-      .getElementById("video-title")
-      ?.value
-      .trim() || "";
+    $("video-title")?.value.trim() || "";
 
   const url =
-    document
-      .getElementById("video-url")
-      ?.value
-      .trim() || "";
+    $("video-url")?.value.trim() || "";
+
 
   if (!title || !url) {
 
     alert(
-      "Veuillez remplir le titre et l'URL."
+      "Veuillez remplir le titre et le lien."
     );
 
     return;
+
   }
 
-  const {
-    error
-  } = await supabaseClient
-    .from("videos")
-    .insert([
-      {
-        title: title,
-        url: url
-      }
-    ]);
 
-  if (error) {
+  try {
+
+    const {
+      error
+    } = await supabaseClient
+      .from("videos")
+      .insert({
+        title,
+        url
+      });
+
+
+    if (error) throw error;
+
+
+    $("video-title").value = "";
+    $("video-url").value = "";
+
+
+    alert(
+      "Vidéo ajoutée avec succès !"
+    );
+
+
+    await loadVideos();
+
+
+  } catch (error) {
 
     console.error(error);
 
     alert(
-      "Erreur lors de l'ajout : " +
+      "Erreur :\n\n" +
       error.message
     );
 
-    return;
   }
 
-  document.getElementById(
-    "video-title"
-  ).value = "";
-
-  document.getElementById(
-    "video-url"
-  ).value = "";
-
-  alert(
-    "Vidéo ajoutée avec succès !"
-  );
-
-  await loadVideos();
 }
 
+
 /* =========================================================
-   20. PROMOTIONS
+   16. PROMOTIONS
    ========================================================= */
 
 async function loadPromotions() {
 
   const container =
-    document.getElementById(
-      "promotions-list"
-    );
+    $("promotions-list");
 
   if (!container) return;
+
 
   const {
     data,
@@ -912,78 +1222,72 @@ async function loadPromotions() {
   } = await supabaseClient
     .from("promotions")
     .select("*")
-    .order("year", {
-      ascending: false
-    });
+    .order(
+      "year",
+      {
+        ascending: false
+      }
+    );
+
 
   if (error) {
 
     console.error(
-      "Erreur chargement promotions :",
+      "Erreur promotions :",
       error
     );
 
     return;
+
   }
+
 
   container.innerHTML = "";
 
-  (data || []).forEach(function(promotion) {
+
+  (data || []).forEach(function(row) {
 
     const item =
       document.createElement("div");
 
-    item.className = "admin-item";
+    item.className =
+      "admin-item";
+
 
     item.innerHTML = `
       <h3>
-        ${escapeHTML(
-          promotion.number?.toString() || ""
-        )}
+        ${escapeHTML(row.number)}
       </h3>
 
       <p>
         <strong>Année :</strong>
-        ${escapeHTML(
-          promotion.year?.toString() || ""
-        )}
+        ${escapeHTML(row.year)}
       </p>
 
       <p>
-        ${escapeHTML(
-          promotion.text || ""
-        )}
+        ${escapeHTML(row.text)}
       </p>
     `;
+
 
     container.appendChild(item);
 
   });
+
 }
 
-/* =========================================================
-   21. AJOUTER UNE PROMOTION
-   ========================================================= */
 
 async function addPromotion() {
 
   const number =
-    document
-      .getElementById("promotion-number")
-      ?.value
-      .trim() || "";
+    $("promotion-number")?.value.trim() || "";
 
   const year =
-    document
-      .getElementById("promotion-year")
-      ?.value
-      .trim() || "";
+    $("promotion-year")?.value.trim() || "";
 
   const text =
-    document
-      .getElementById("promotion-text")
-      ?.value
-      .trim() || "";
+    $("promotion-text")?.value.trim() || "";
+
 
   if (!number || !year || !text) {
 
@@ -992,53 +1296,55 @@ async function addPromotion() {
     );
 
     return;
+
   }
 
-  const {
-    error
-  } = await supabaseClient
-    .from("promotions")
-    .insert([
-      {
-        number: number,
-        year: year,
-        text: text
-      }
-    ]);
 
-  if (error) {
+  try {
+
+    const {
+      error
+    } = await supabaseClient
+      .from("promotions")
+      .insert({
+        number,
+        year,
+        text
+      });
+
+
+    if (error) throw error;
+
+
+    $("promotion-number").value = "";
+    $("promotion-year").value = "";
+    $("promotion-text").value = "";
+
+
+    alert(
+      "Promotion ajoutée avec succès !"
+    );
+
+
+    await loadPromotions();
+
+
+  } catch (error) {
 
     console.error(error);
 
     alert(
-      "Erreur lors de l'ajout : " +
+      "Erreur :\n\n" +
       error.message
     );
 
-    return;
   }
 
-  document.getElementById(
-    "promotion-number"
-  ).value = "";
-
-  document.getElementById(
-    "promotion-year"
-  ).value = "";
-
-  document.getElementById(
-    "promotion-text"
-  ).value = "";
-
-  alert(
-    "Promotion ajoutée avec succès !"
-  );
-
-  await loadPromotions();
 }
 
+
 /* =========================================================
-   22. EXPORTER LES DONNÉES
+   17. EXPORT
    ========================================================= */
 
 async function exportData() {
@@ -1051,29 +1357,40 @@ async function exportData() {
     "promotions"
   ];
 
+
   const result = {};
+
 
   for (const table of tables) {
 
-    const {
-      data,
-      error
-    } = await supabaseClient
-      .from(table)
-      .select("*");
+    try {
 
-    if (error) {
+      const {
+        data,
+        error
+      } = await supabaseClient
+        .from(table)
+        .select("*");
+
+
+      if (!error) {
+
+        result[table] =
+          data || [];
+
+      }
+
+    } catch (error) {
 
       console.error(
-        "Erreur export " + table + " :",
+        "Export " + table,
         error
       );
 
-      continue;
     }
 
-    result[table] = data || [];
   }
+
 
   const blob =
     new Blob(
@@ -1089,16 +1406,20 @@ async function exportData() {
       }
     );
 
+
   const url =
     URL.createObjectURL(blob);
 
+
   const link =
     document.createElement("a");
+
 
   link.href = url;
 
   link.download =
     "clan-saint-marc-data.json";
+
 
   document.body.appendChild(link);
 
@@ -1107,120 +1428,132 @@ async function exportData() {
   link.remove();
 
   URL.revokeObjectURL(url);
+
 }
 
+
 /* =========================================================
-   23. PROTECTION CONTRE LE HTML
+   18. INITIALISATION
    ========================================================= */
 
-function escapeHTML(value) {
+async function initializeAdminPage() {
 
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  console.log(
+    "=== CLAN SAINT MARC ADMIN ==="
+  );
+
+
+  showLogin();
+
+
+  /*
+    Initialisation Supabase
+  */
+
+  if (!initializeSupabase()) {
+
+    return;
+
+  }
+
+
+  /*
+    Vérification session existante
+  */
+
+  try {
+
+    const {data,
+      error
+    } = await supabaseClient
+      .auth
+      .getSession();
+
+
+    if (error) {
+
+      console.error(
+        "Erreur session :",
+        error
+      );
+
+      return;
+
+    }
+
+
+    if (!data.session) {
+
+      console.log(
+        "Aucune session active."
+      );
+
+      return;
+
+    }
+
+
+    /*
+      Session existante :
+      on vérifie quand même les droits.
+    */
+
+    const adminResult =
+      await checkAdmin();
+
+
+    if (!adminResult.ok) {
+
+      await supabaseClient
+        .auth
+        .signOut();
+
+      return;
+
+    }
+
+
+    currentUser =
+      data.session.user;
+
+
+    showDashboard(
+      currentUser
+    );
+
+
+    await loadAllData();
+
+
+  } catch (error) {
+
+    console.error(
+      "Erreur initialisation :",
+      error
+    );
+
+    setMessage(
+      "Erreur au chargement : " +
+      error.message
+    );
+
+  }
 
 }
 
+
 /* =========================================================
-   24. INITIALISATION
+   19. ÉVÉNEMENTS
    ========================================================= */
 
 document.addEventListener(
   "DOMContentLoaded",
-  async function() {
-
-    console.log(
-      "=== CLAN SAINT MARC ADMIN ==="
-    );
-
-    /* Par défaut : connexion visible */
-    showLogin();
-
-    /* Charger l'onglet actualités */
-    showTab("news");
-
-    try {
-
-      const {
-        data,
-        error
-      } = await supabaseClient.auth.getSession();
-
-      if (error) {
-
-        console.error(
-          "Erreur récupération session :",
-          error
-        );
-
-        showLogin();
-
-        return;
-      }
-
-      const session =
-        data.session;
-
-      /* Pas connecté */
-      if (!session) {
-
-        showLogin();
-
-        return;
-      }
-
-      /const session =
-        data.session;
-
-      /* Pas connecté */
-      if (!session) {
-
-        showLogin();
-
-        return;
-      }
-
-      /* Utilisateur déjà connecté */
-      const user =
-        session.user;
-
-      const isAdmin =
-        await checkAdmin();
-
-      /* Session existante mais pas admin */
-      if (!isAdmin) {
-
-        await supabaseClient
-          .auth
-          .signOut();
-
-        showLogin();
-
-        return;
-      }
-
-      /* Administrateur reconnu */
-      showDashboard(user);
-
-      await loadAllData();
-
-    } catch (error) {
-
-      console.error(
-        "Erreur initialisation admin :",
-        error
-      );
-
-      showLogin();
-    }
-  }
+  initializeAdminPage
 );
 
+
 /* =========================================================
-   25. RENDRE LES FONCTIONS DISPONIBLES AU HTML
+   20. EXPOSER LES FONCTIONS AU HTML
    ========================================================= */
 
 window.loginAdmin =
@@ -1250,6 +1583,8 @@ window.addPromotion =
 window.exportData =
   exportData;
 
+
 /* =========================================================
-   FIN ADMIN.JS
+   FIN
    ========================================================= */
+    
