@@ -56,9 +56,6 @@ function showMessage(message, type = "error") {
 
 /* =========================================================
    4. VÉRIFICATION ADMIN
-   IMPORTANT :
-   La fonction Supabase is_admin() utilise auth.uid()
-   et ne reçoit PAS user_id.
    ========================================================= */
 
 async function checkAdmin() {
@@ -70,11 +67,21 @@ async function checkAdmin() {
     .rpc("is_admin");
 
 
+  console.log("=== TEST ADMIN ===");
+  console.log("RPC data :", data);
+  console.log("RPC error :", error);
+
+
   if (error) {
 
     console.error(
       "Erreur vérification admin :",
       error
+    );
+
+    alert(
+      "ERREUR RPC is_admin :\n\n" +
+      error.message
     );
 
     return false;
@@ -186,8 +193,6 @@ async function loginAdmin() {
     data.user;
 
 
-  /* IMPORTANT :
-     aucun user.id ici */
   const isAdmin =
     await checkAdmin();
 
@@ -465,10 +470,7 @@ async function addNews() {
         {
           title: title,
           date: date,
-
-          /* CORRECTION IMPORTANTE */
           content: text,
-
           image: image || null
         }
       ])
@@ -1304,8 +1306,6 @@ document.addEventListener(
       session.user;
 
 
-    /* CORRECTION :
-       aucun user.id */
     const isAdmin =
       await checkAdmin();
 
