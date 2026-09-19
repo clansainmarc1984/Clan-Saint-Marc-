@@ -1172,4 +1172,84 @@ document.addEventListener(
         return;
       }
 
-      /
+      /const session =
+        data.session;
+
+      /* Pas connecté */
+      if (!session) {
+
+        showLogin();
+
+        return;
+      }
+
+      /* Utilisateur déjà connecté */
+      const user =
+        session.user;
+
+      const isAdmin =
+        await checkAdmin();
+
+      /* Session existante mais pas admin */
+      if (!isAdmin) {
+
+        await supabaseClient
+          .auth
+          .signOut();
+
+        showLogin();
+
+        return;
+      }
+
+      /* Administrateur reconnu */
+      showDashboard(user);
+
+      await loadAllData();
+
+    } catch (error) {
+
+      console.error(
+        "Erreur initialisation admin :",
+        error
+      );
+
+      showLogin();
+    }
+  }
+);
+
+/* =========================================================
+   25. RENDRE LES FONCTIONS DISPONIBLES AU HTML
+   ========================================================= */
+
+window.loginAdmin =
+  loginAdmin;
+
+window.logoutAdmin =
+  logoutAdmin;
+
+window.showTab =
+  showTab;
+
+window.addNews =
+  addNews;
+
+window.addBirthday =
+  addBirthday;
+
+window.addGallery =
+  addGallery;
+
+window.addVideo =
+  addVideo;
+
+window.addPromotion =
+  addPromotion;
+
+window.exportData =
+  exportData;
+
+/* =========================================================
+   FIN ADMIN.JS
+   ========================================================= */
