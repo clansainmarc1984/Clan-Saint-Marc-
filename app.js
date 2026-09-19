@@ -163,7 +163,7 @@ function renderAll() {
             </h3>
 
             <p>
-              ${esc(x.text)}
+              ${esc(x.content)}
             </p>
 
             ${
