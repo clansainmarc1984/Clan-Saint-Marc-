@@ -8,29 +8,45 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1.0">
 
-<meta name="robots" content="noindex,nofollow">
+<meta name="robots"
+      content="noindex,nofollow">
 
-<meta name="theme-color" content="#c9151e">
+<meta name="theme-color"
+      content="#c9151e">
 
-<title>Administration | Clan Saint Marc</title>
+<title>
+  Administration | Clan Saint Marc
+</title>
 
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet"
+      href="style.css">
 
 </head>
 
 
 <body>
 
+
+<!-- =====================================================
+     BARRE SUPÉRIEURE
+     ===================================================== -->
+
 <header class="topbar">
 
-  <a class="brand" href="index.html">
+  <a class="brand"
+     href="index.html">
 
     <img src="logo.jpg"
          alt="Logo du Clan Saint Marc">
 
     <span>
+
       CLAN SAINT MARC
-      <small>ADMINISTRATION</small>
+
+      <small>
+        ADMINISTRATION
+      </small>
+
     </span>
 
   </a>
@@ -38,9 +54,15 @@
 </header>
 
 
+
+<!-- =====================================================
+     CONTENU PRINCIPAL
+     ===================================================== -->
+
 <main>
 
 <section class="section admin">
+
 
   <div class="section-head">
 
@@ -59,7 +81,10 @@
   </div>
 
 
-  <!-- CONNEXION -->
+
+  <!-- =================================================
+       CONNEXION
+       ================================================= -->
 
   <div id="login-box"
        class="admin-box">
@@ -105,12 +130,17 @@
   </div>
 
 
-  <!-- TABLEAU DE BORD -->
+
+  <!-- =================================================
+       TABLEAU DE BORD
+       ================================================= -->
 
   <div id="dashboard"
        class="dashboard"
        hidden>
 
+
+    <!-- EN-TÊTE -->
 
     <div class="dash-head">
 
@@ -139,7 +169,10 @@
     </div>
 
 
-    <!-- ONGLETS -->
+
+    <!-- =================================================
+         ONGLETS
+         ================================================= -->
 
     <div class="tabs">
 
@@ -190,12 +223,14 @@
     </div>
 
 
+
     <!-- =================================================
          ACTUALITÉS
          ================================================= -->
 
     <div id="news"
          class="tab-panel">
+
 
       <h4>
         Ajouter une actualité
@@ -241,6 +276,7 @@
     </div>
 
 
+
     <!-- =================================================
          ANNIVERSAIRES
          ================================================= -->
@@ -248,6 +284,7 @@
     <div id="birthdays"
          class="tab-panel"
          hidden>
+
 
       <h4>
         Ajouter un anniversaire
@@ -288,6 +325,7 @@
     </div>
 
 
+
     <!-- =================================================
          GALERIE
          ================================================= -->
@@ -295,6 +333,7 @@
     <div id="gallery"
          class="tab-panel"
          hidden>
+
 
       <h4>
         Ajouter une photo
@@ -343,6 +382,7 @@
     </div>
 
 
+
     <!-- =================================================
          VIDÉOS
          ================================================= -->
@@ -350,6 +390,7 @@
     <div id="videos"
          class="tab-panel"
          hidden>
+
 
       <h4>
         Ajouter une vidéo
@@ -385,6 +426,7 @@
     </div>
 
 
+
     <!-- =================================================
          PROMOTIONS
          ================================================= -->
@@ -392,6 +434,7 @@
     <div id="promotions"
          class="tab-panel"
          hidden>
+
 
       <h4>
         Historique des promotions
@@ -433,7 +476,10 @@
     </div>
 
 
-    <!-- OUTILS -->
+
+    <!-- =================================================
+         OUTILS
+         ================================================= -->
 
     <div class="data-tools">
 
@@ -450,7 +496,9 @@
 
     <p class="warning">
 
-      <strong>Sécurité :</strong>
+      <strong>
+        Sécurité :
+      </strong>
 
       les modifications sont protégées par Supabase Auth
       et par les politiques RLS de la base de données.
@@ -464,6 +512,11 @@
 
 </main>
 
+
+
+<!-- =====================================================
+     PIED DE PAGE
+     ===================================================== -->
 
 <footer>
 
@@ -496,11 +549,15 @@
 </footer>
 
 
+
 <!-- =====================================================
      SUPABASE
      ===================================================== -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+</script>
+
 
 
 <!-- =====================================================
@@ -510,34 +567,54 @@
 <script src="config.js"></script>
 
 
+
 <!-- =====================================================
-     SCRIPT ADMINISTRATION
-
-     ?v=20260918-2 force le navigateur à charger
-     la nouvelle version du fichier.
+     ADMIN.JS
+     
+     v=3 force le navigateur à charger
+     la nouvelle version.
      ===================================================== -->
-<script src="admin.js?v=2"></script>
 
-<!-- DIAGNOSTIC -->
+<script src="admin.js?v=3"></script>
+
+
+
+<!-- =====================================================
+     DIAGNOSTIC
+     ===================================================== -->
 
 <script>
 
-console.log("=================================");
-console.log("CLAN SAINT MARC - ADMIN");
-console.log("admin.html chargé");
+console.log(
+  "================================="
+);
+
+console.log(
+  "CLAN SAINT MARC - ADMIN"
+);
+
+console.log(
+  "admin.html chargé"
+);
+
 console.log(
   "Supabase disponible :",
   typeof supabase !== "undefined"
 );
+
 console.log(
   "loginAdmin disponible :",
   typeof window.loginAdmin === "function"
 );
+
 console.log(
   "addNews disponible :",
   typeof window.addNews === "function"
 );
-console.log("=================================");
+
+console.log(
+  "================================="
+);
 
 </script>
 
